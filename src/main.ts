@@ -201,8 +201,11 @@ class Siku extends utils.Adapter {
                     parameters: [request],
                 });
 
-                await this.applyMappedStateUpdates(device, decodeMappedStateUpdates(responsePacket));
-                await this.applyMappedStateUpdates(device, decodeScheduleUpdates(responsePacket));
+                const mappedUpdates = decodeMappedStateUpdates(responsePacket);
+                const scheduleUpdates = decodeScheduleUpdates(responsePacket);
+
+                await this.applyMappedStateUpdates(device, mappedUpdates);
+                await this.applyMappedStateUpdates(device, scheduleUpdates);
 
                 if (isScheduleStateId(relativeId)) {
                     return;
@@ -210,11 +213,6 @@ class Siku extends utils.Adapter {
 
                 if (isButtonState(relativeId)) {
                     await this.setStateChangedAsync(fullStateId, false, true);
-                } else {
-                    const updatedValue = decodeMappedStateUpdates(responsePacket).find(
-                        update => update.relativeId === relativeId,
-                    )?.value;
-                    await this.setStateChangedAsync(fullStateId, updatedValue ?? state.val, true);
                 }
 
                 await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, '', true);
@@ -1206,10 +1204,22 @@ class Siku extends utils.Adapter {
         value: ioBroker.StateValue,
     ): Promise<ReturnType<typeof buildScheduleWriteRequest>> {
         const values: Record<string, ioBroker.StateValue> = {};
+        const namespacePrefix = `${this.namespace}.`;
+        const relativeNamespaceId = fullStateId.startsWith(namespacePrefix)
+            ? fullStateId.slice(namespacePrefix.length)
+            : fullStateId;
 
         for (const snapshotRelativeId of getScheduleSnapshotStateIds(relativeId)) {
-            const state = await this.getStateAsync(fullStateId.replace(relativeId, snapshotRelativeId));
-            values[snapshotRelativeId] = state?.val ?? 0;
+            const snapshotStateId = relativeNamespaceId.replace(relativeId, snapshotRelativeId);
+            const state = await this.getStateAsync(snapshotStateId);
+
+            if (state?.val === undefined || state.val === null) {
+                throw new Error(
+                    `Zeitplan-Schreibvorgang abgebrochen: Snapshot-State "${this.namespace}.${snapshotStateId}" ist nicht vorhanden oder hat keinen Wert.`,
+                );
+            }
+
+            values[snapshotRelativeId] = state.val;
         }
 
         values[relativeId] = value;
