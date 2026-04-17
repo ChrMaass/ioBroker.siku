@@ -3,6 +3,7 @@
  */
 
 import * as utils from '@iobroker/adapter-core';
+import { SIKU_DEFAULT_PASSWORD } from './lib/siku-constants';
 import { discoverDevices, readDevicePacket } from './lib/siku-network';
 import { toHex } from './lib/siku-protocol';
 import type { ParsedSikuPacket, SikuReadRequestEntry } from './lib/siku-protocol';
@@ -65,8 +66,8 @@ class Siku extends utils.Adapter {
      *
      * @param obj - The incoming ioBroker message object
      */
-    private async onMessage(obj: ioBroker.Message): Promise<void> {
-        if (typeof obj !== 'object' || !obj.command) {
+    private async onMessage(obj: ioBroker.Message | null | undefined): Promise<void> {
+        if (!obj || typeof obj !== 'object' || !('command' in obj) || !obj.command) {
             return;
         }
 
@@ -100,7 +101,9 @@ class Siku extends utils.Adapter {
      * @param obj - The original ioBroker message
      */
     private async handleDiscoverMessage(obj: ioBroker.Message): Promise<void> {
-        const payload = (typeof obj.message === 'object' ? obj.message : {}) as DiscoverMessagePayload;
+        const payload = (
+            typeof obj.message === 'object' && obj.message !== null ? obj.message : {}
+        ) as DiscoverMessagePayload;
         const devices = await discoverDevices({
             broadcastAddress: payload.broadcastAddress ?? this.config.discoveryBroadcastAddress,
             password: payload.password,
@@ -129,7 +132,7 @@ class Siku extends utils.Adapter {
         const packet = await readDevicePacket({
             host: payload.host,
             deviceId: payload.deviceId,
-            password: payload.password ?? '1111',
+            password: payload.password ?? SIKU_DEFAULT_PASSWORD,
             port: payload.port,
             timeoutMs: payload.timeoutMs,
             parameters: this.normalizeReadParameters(payload.parameters),
@@ -143,16 +146,84 @@ class Siku extends utils.Adapter {
      *
      * @param parameters - Raw parameter definitions from the message payload
      */
-    private normalizeReadParameters(parameters: Array<number | SikuReadRequestEntry>): SikuReadRequestEntry[] {
-        return parameters.map(parameter =>
-            typeof parameter === 'number'
-                ? { parameter }
-                : {
-                      parameter: parameter.parameter,
-                      valueSize: parameter.valueSize,
-                      requestValue: parameter.requestValue,
-                  },
-        );
+    private normalizeReadParameters(parameters: unknown[]): SikuReadRequestEntry[] {
+        return parameters.map((parameter, index) => {
+            const location = `parameters[${index}]`;
+
+            if (typeof parameter === 'number') {
+                return { parameter: this.validateReadParameterId(parameter, `${location}.parameter`) };
+            }
+
+            if (typeof parameter !== 'object' || parameter === null) {
+                throw new Error(`${location} must be a number or an object`);
+            }
+
+            const entry = parameter as Partial<SikuReadRequestEntry>;
+            const normalized: SikuReadRequestEntry = {
+                parameter: this.validateReadParameterId(entry.parameter, `${location}.parameter`),
+            };
+
+            if (entry.valueSize !== undefined) {
+                if (!Number.isInteger(entry.valueSize) || entry.valueSize < 0 || entry.valueSize > 0xff) {
+                    throw new Error(`${location}.valueSize must be an integer between 0 and 255`);
+                }
+                normalized.valueSize = entry.valueSize;
+            }
+
+            if (entry.requestValue !== undefined) {
+                const requestValue = this.normalizeRequestValue(entry.requestValue, `${location}.requestValue`);
+                const requestValueLength = requestValue.length;
+                if (normalized.valueSize !== undefined && normalized.valueSize !== requestValueLength) {
+                    throw new Error(
+                        `${location}.valueSize (${normalized.valueSize}) must match ${location}.requestValue length (${requestValueLength})`,
+                    );
+                }
+                normalized.requestValue = requestValue;
+            }
+
+            return normalized;
+        });
+    }
+
+    /**
+     * Validates a read parameter identifier from a message payload.
+     *
+     * @param value - Raw parameter identifier
+     * @param fieldName - Field name for error reporting
+     */
+    private validateReadParameterId(value: unknown, fieldName: string): number {
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 0xffff) {
+            throw new Error(`${fieldName} must be an integer between 0 and 65535`);
+        }
+
+        return value;
+    }
+
+    /**
+     * Normalizes request payload bytes and rejects invalid byte values early.
+     *
+     * @param requestValue - Raw request value from the message payload
+     * @param fieldName - Field name for error reporting
+     */
+    private normalizeRequestValue(requestValue: unknown, fieldName: string): Buffer | Uint8Array | number[] {
+        if (Buffer.isBuffer(requestValue)) {
+            return Buffer.from(requestValue);
+        }
+
+        if (requestValue instanceof Uint8Array) {
+            return new Uint8Array(requestValue);
+        }
+
+        if (Array.isArray(requestValue)) {
+            requestValue.forEach((value, index) => {
+                if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 0xff) {
+                    throw new Error(`${fieldName}[${index}] must be an integer between 0 and 255`);
+                }
+            });
+            return requestValue.map(value => value as number);
+        }
+
+        throw new Error(`${fieldName} must be a Buffer, Uint8Array or array of byte values`);
     }
 
     /**

@@ -48,13 +48,18 @@ function normalizeByteArray(input) {
   if (!input) {
     return Buffer.alloc(0);
   }
-  const buffer = Buffer.isBuffer(input) ? Buffer.from(input) : Buffer.from(input);
-  for (const byte of buffer.values()) {
-    if (byte < 0 || byte > 255) {
+  if (Buffer.isBuffer(input)) {
+    return Buffer.from(input);
+  }
+  if (input instanceof Uint8Array) {
+    return Buffer.from(input);
+  }
+  for (const byte of input) {
+    if (!Number.isInteger(byte) || byte < 0 || byte > 255) {
       throw new Error(`Invalid byte value ${byte}`);
     }
   }
-  return buffer;
+  return Buffer.from(input);
 }
 function getParameterPage(parameter) {
   return parameter >> 8 & 255;
@@ -174,30 +179,57 @@ function parsePacket(packet) {
   }
   const storedChecksum = packet[packet.length - 2] + (packet[packet.length - 1] << 8);
   const checksumValid = calculateChecksum(packet.subarray(0, -2)) === storedChecksum;
+  const payloadEnd = packet.length - 2;
   let position = 3;
+  if (position >= payloadEnd) {
+    throw new Error("Packet is truncated before the device ID length");
+  }
   const deviceIdLength = packet[position++];
+  if (deviceIdLength !== import_siku_constants.SIKU_DEVICE_ID_LENGTH) {
+    throw new Error(`Invalid device ID length: ${deviceIdLength}`);
+  }
+  if (position + deviceIdLength > payloadEnd) {
+    throw new Error("Packet is truncated inside the device ID field");
+  }
   const deviceIdBytes = packet.subarray(position, position + deviceIdLength);
   position += deviceIdLength;
+  if (position >= payloadEnd) {
+    throw new Error("Packet is truncated before the password length");
+  }
   const passwordLength = packet[position++];
+  if (position + passwordLength > payloadEnd) {
+    throw new Error("Packet is truncated inside the password field");
+  }
   const passwordBytes = packet.subarray(position, position + passwordLength);
   position += passwordLength;
+  if (position >= payloadEnd) {
+    throw new Error("Packet is truncated before the function code");
+  }
   const baseFunctionCode = packet[position++];
   let currentFunctionCode = baseFunctionCode;
   let currentPage = 0;
   const entries = [];
-  while (position < packet.length - 2) {
+  const ensureBytesAvailable = (requiredBytes, context) => {
+    if (position + requiredBytes > payloadEnd) {
+      throw new Error(`Packet ended while parsing ${context}`);
+    }
+  };
+  while (position < payloadEnd) {
     const marker = packet[position];
     if (marker === import_siku_constants.SIKU_SPECIAL_COMMANDS.changeFunction) {
+      ensureBytesAvailable(2, "a function-change marker");
       currentFunctionCode = packet[position + 1];
       position += 2;
       continue;
     }
     if (marker === import_siku_constants.SIKU_SPECIAL_COMMANDS.page) {
+      ensureBytesAvailable(2, "a page marker");
       currentPage = packet[position + 1];
       position += 2;
       continue;
     }
     if (marker === import_siku_constants.SIKU_SPECIAL_COMMANDS.unsupported) {
+      ensureBytesAvailable(2, "an unsupported-parameter marker");
       entries.push({
         parameter: currentPage << 8 | packet[position + 1],
         size: 0,
@@ -209,11 +241,12 @@ function parsePacket(packet) {
       continue;
     }
     if (marker === import_siku_constants.SIKU_SPECIAL_COMMANDS.valueSize) {
+      ensureBytesAvailable(3, "an extended value header");
       const valueSize = packet[position + 1];
       const lowByte = packet[position + 2];
       const start = position + 3;
       const end = start + valueSize;
-      if (end > packet.length - 2) {
+      if (end > payloadEnd) {
         throw new Error("Packet ended while parsing an extended value");
       }
       entries.push({
@@ -228,9 +261,7 @@ function parsePacket(packet) {
     }
     const parameter = currentPage << 8 | marker;
     if (requiresValue(currentFunctionCode)) {
-      if (position + 1 >= packet.length - 1) {
-        throw new Error("Packet ended while parsing a single-byte value");
-      }
+      ensureBytesAvailable(2, "a single-byte value");
       entries.push({
         parameter,
         size: 1,

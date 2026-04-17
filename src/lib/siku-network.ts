@@ -1,4 +1,5 @@
 import dgram from 'node:dgram';
+import type { AddressInfo } from 'node:net';
 import { networkInterfaces } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
@@ -45,6 +46,22 @@ export interface SikuReadDeviceOptions {
     port?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
+}
+
+interface SikuDiscoverySocket {
+    on(event: 'message', listener: (message: Buffer, remoteInfo: dgram.RemoteInfo) => void): this;
+    send(buffer: Buffer, port: number, address: string, callback: (error: Error | null) => void): void;
+    setBroadcast(flag: boolean): void;
+    close(): void;
+    address(): AddressInfo;
+}
+
+export interface SikuNetworkDependencies {
+    bindSocketWithFallback?: (preferredPort: number) => Promise<SikuDiscoverySocket>;
+    requestOnce?: (host: string, port: number, payload: Buffer, timeoutMs: number) => Promise<Buffer>;
+    delay?: (timeoutMs: number) => Promise<unknown>;
+    getLocalIPv4Addresses?: () => Set<string>;
+    now?: () => Date;
 }
 
 function getLocalIPv4Addresses(): Set<string> {
@@ -97,69 +114,124 @@ async function bindSocketWithFallback(preferredPort: number): Promise<dgram.Sock
 async function requestOnce(host: string, port: number, payload: Buffer, timeoutMs: number): Promise<Buffer> {
     const socket = dgram.createSocket('udp4');
 
-    try {
-        return await new Promise<Buffer>((resolve, reject) => {
-            let finished = false;
-            let timeoutHandle: NodeJS.Timeout | undefined;
+    return new Promise<Buffer>((resolve, reject) => {
+        let finished = false;
+        let timeoutHandle: NodeJS.Timeout | undefined;
 
-            const cleanup = (): void => {
-                if (timeoutHandle) {
-                    clearTimeout(timeoutHandle);
-                }
-                socket.removeAllListeners();
-                socket.close();
-            };
+        const cleanup = (): void => {
+            if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+            }
+            socket.removeAllListeners();
+            socket.close();
+        };
 
-            const finish = (error?: Error, response?: Buffer): void => {
-                if (finished) {
+        const finish = (error?: Error, response?: Buffer): void => {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            cleanup();
+            if (error) {
+                reject(error);
+            } else if (response) {
+                resolve(response);
+            } else {
+                reject(new Error('No response received'));
+            }
+        };
+
+        socket.on('error', finish);
+        socket.on('message', (message, remoteInfo) => {
+            if (remoteInfo.address === host && remoteInfo.port === port) {
+                finish(undefined, message);
+            }
+        });
+        socket.bind(0, () => {
+            socket.send(payload, port, host, error => {
+                if (error) {
+                    finish(error);
                     return;
                 }
-                finished = true;
-                cleanup();
-                if (error) {
-                    reject(error);
-                } else if (response) {
-                    resolve(response);
-                } else {
-                    reject(new Error('No response received'));
-                }
-            };
-
-            socket.on('error', finish);
-            socket.on('message', (message, remoteInfo) => {
-                if (remoteInfo.address === host && remoteInfo.port === port) {
-                    finish(undefined, message);
-                }
-            });
-            socket.bind(0, () => {
-                socket.send(payload, port, host, error => {
-                    if (error) {
-                        finish(error);
-                        return;
-                    }
-                    timeoutHandle = setTimeout(() => {
-                        finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
-                    }, timeoutMs);
-                });
+                timeoutHandle = setTimeout(() => {
+                    finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
+                }, timeoutMs);
             });
         });
-    } catch (error) {
-        socket.close();
-        throw error;
-    }
+    });
 }
 
-export async function readDevicePacket(options: SikuReadDeviceOptions): Promise<ParsedSikuPacket> {
+/**
+ * Returns whether a discovery message is only the local broadcast echo and should be ignored.
+ *
+ * @param message - Raw UDP payload
+ * @param remoteInfo - Sender information for the datagram
+ * @param localAddresses - Known local IPv4 addresses of the current host
+ * @param boundPort - Local UDP port that the discovery socket is bound to
+ * @param discoveryPacket - Original discovery request packet
+ */
+export function isDiscoverySelfEcho(
+    message: Buffer,
+    remoteInfo: Pick<dgram.RemoteInfo, 'address' | 'port'>,
+    localAddresses: ReadonlySet<string>,
+    boundPort: number,
+    discoveryPacket: Buffer,
+): boolean {
+    if (message.equals(discoveryPacket)) {
+        return true;
+    }
+
+    return localAddresses.has(remoteInfo.address) && remoteInfo.port === boundPort;
+}
+
+/**
+ * Parses a discovery response into a normalized device descriptor.
+ *
+ * @param message - Raw UDP discovery response
+ * @param remoteInfo - Sender information for the datagram
+ * @param receivedAt - Timestamp used for deterministic tests and logging
+ */
+export function parseDiscoveryResponse(
+    message: Buffer,
+    remoteInfo: Pick<dgram.RemoteInfo, 'address' | 'port'>,
+    receivedAt: Date = new Date(),
+): SikuDiscoveredDevice | null {
+    const parsed = parsePacket(message);
+    const idEntry = parsed.entries.find(entry => entry.parameter === SIKU_PARAMETER_DEVICE_ID && !entry.unsupported);
+    const deviceTypeEntry = parsed.entries.find(
+        entry => entry.parameter === SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported,
+    );
+    const deviceId = decodeAscii(idEntry?.value ?? parsed.deviceIdBytes);
+    if (!deviceId) {
+        return null;
+    }
+
+    return {
+        host: remoteInfo.address,
+        port: remoteInfo.port,
+        deviceId,
+        deviceTypeCode: deviceTypeEntry ? decodeUnsignedLE(deviceTypeEntry.value) : null,
+        deviceTypeHex: deviceTypeEntry ? toHex(deviceTypeEntry.value) : null,
+        receivedAt: receivedAt.toISOString(),
+    };
+}
+
+export async function readDevicePacket(
+    options: SikuReadDeviceOptions,
+    dependencies: SikuNetworkDependencies = {},
+): Promise<ParsedSikuPacket> {
     const payload = buildReadPacket(options.deviceId, options.password, options.parameters);
     const retryDelays = options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS;
+    const request = dependencies.requestOnce ?? requestOnce;
+    const wait = dependencies.delay ?? delay;
     let lastError: Error | undefined;
 
     for (const retryDelay of retryDelays) {
         try {
             if (retryDelay > 0) {
-                await delay(retryDelay);
+                await wait(retryDelay);
             }
-            const response = await requestOnce(
+            const response = await request(
                 options.host,
                 options.port ?? SIKU_DEFAULT_PORT,
                 payload,
@@ -174,44 +246,33 @@ export async function readDevicePacket(options: SikuReadDeviceOptions): Promise<
     throw lastError ?? new Error(`Unable to read from ${options.host}`);
 }
 
-export async function discoverDevices(options: SikuDiscoveryOptions): Promise<SikuDiscoveredDevice[]> {
-    const socket = await bindSocketWithFallback(options.preferredBindPort ?? SIKU_DEFAULT_PORT);
+export async function discoverDevices(
+    options: SikuDiscoveryOptions,
+    dependencies: SikuNetworkDependencies = {},
+): Promise<SikuDiscoveredDevice[]> {
+    const bind = dependencies.bindSocketWithFallback ?? bindSocketWithFallback;
+    const wait = dependencies.delay ?? delay;
+    const now = dependencies.now ?? (() => new Date());
+    const localAddresses = (dependencies.getLocalIPv4Addresses ?? getLocalIPv4Addresses)();
+    const socket = await bind(options.preferredBindPort ?? SIKU_DEFAULT_PORT);
     const discoveryPacket = buildDiscoveryPacket(options.password ?? SIKU_DEFAULT_PASSWORD);
-    const localAddresses = getLocalIPv4Addresses();
 
     try {
         socket.setBroadcast(true);
         const devices = new Map<string, SikuDiscoveredDevice>();
 
         socket.on('message', (message, remoteInfo) => {
-            if (message.equals(discoveryPacket)) {
-                return;
-            }
-            if (localAddresses.has(remoteInfo.address) && remoteInfo.port === socket.address().port) {
+            if (isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)) {
                 return;
             }
 
             try {
-                const parsed = parsePacket(message);
-                const idEntry = parsed.entries.find(
-                    entry => entry.parameter === SIKU_PARAMETER_DEVICE_ID && !entry.unsupported,
-                );
-                const deviceTypeEntry = parsed.entries.find(
-                    entry => entry.parameter === SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported,
-                );
-                const deviceId = decodeAscii(idEntry?.value ?? parsed.deviceIdBytes);
-                if (!deviceId) {
+                const device = parseDiscoveryResponse(message, remoteInfo, now());
+                if (!device) {
                     return;
                 }
 
-                devices.set(deviceId, {
-                    host: remoteInfo.address,
-                    port: remoteInfo.port,
-                    deviceId,
-                    deviceTypeCode: deviceTypeEntry ? decodeUnsignedLE(deviceTypeEntry.value) : null,
-                    deviceTypeHex: deviceTypeEntry ? toHex(deviceTypeEntry.value) : null,
-                    receivedAt: new Date().toISOString(),
-                });
+                devices.set(device.deviceId, device);
             } catch {
                 // Ignore unrelated or malformed UDP packets during discovery.
             }
@@ -223,7 +284,7 @@ export async function discoverDevices(options: SikuDiscoveryOptions): Promise<Si
             );
         });
 
-        await delay(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS);
+        await wait(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS);
         return Array.from(devices.values()).sort((left, right) => left.deviceId.localeCompare(right.deviceId));
     } finally {
         socket.close();

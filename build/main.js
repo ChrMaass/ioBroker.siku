@@ -22,6 +22,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
+var import_siku_constants = require("./lib/siku-constants");
 var import_siku_network = require("./lib/siku-network");
 var import_siku_protocol = require("./lib/siku-protocol");
 class Siku extends utils.Adapter {
@@ -63,7 +64,7 @@ class Siku extends utils.Adapter {
    * @param obj - The incoming ioBroker message object
    */
   async onMessage(obj) {
-    if (typeof obj !== "object" || !obj.command) {
+    if (!obj || typeof obj !== "object" || !("command" in obj) || !obj.command) {
       return;
     }
     try {
@@ -94,7 +95,7 @@ class Siku extends utils.Adapter {
    */
   async handleDiscoverMessage(obj) {
     var _a;
-    const payload = typeof obj.message === "object" ? obj.message : {};
+    const payload = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
     const devices = await (0, import_siku_network.discoverDevices)({
       broadcastAddress: (_a = payload.broadcastAddress) != null ? _a : this.config.discoveryBroadcastAddress,
       password: payload.password,
@@ -120,7 +121,7 @@ class Siku extends utils.Adapter {
     const packet = await (0, import_siku_network.readDevicePacket)({
       host: payload.host,
       deviceId: payload.deviceId,
-      password: (_a = payload.password) != null ? _a : "1111",
+      password: (_a = payload.password) != null ? _a : import_siku_constants.SIKU_DEFAULT_PASSWORD,
       port: payload.port,
       timeoutMs: payload.timeoutMs,
       parameters: this.normalizeReadParameters(payload.parameters)
@@ -133,13 +134,71 @@ class Siku extends utils.Adapter {
    * @param parameters - Raw parameter definitions from the message payload
    */
   normalizeReadParameters(parameters) {
-    return parameters.map(
-      (parameter) => typeof parameter === "number" ? { parameter } : {
-        parameter: parameter.parameter,
-        valueSize: parameter.valueSize,
-        requestValue: parameter.requestValue
+    return parameters.map((parameter, index) => {
+      const location = `parameters[${index}]`;
+      if (typeof parameter === "number") {
+        return { parameter: this.validateReadParameterId(parameter, `${location}.parameter`) };
       }
-    );
+      if (typeof parameter !== "object" || parameter === null) {
+        throw new Error(`${location} must be a number or an object`);
+      }
+      const entry = parameter;
+      const normalized = {
+        parameter: this.validateReadParameterId(entry.parameter, `${location}.parameter`)
+      };
+      if (entry.valueSize !== void 0) {
+        if (!Number.isInteger(entry.valueSize) || entry.valueSize < 0 || entry.valueSize > 255) {
+          throw new Error(`${location}.valueSize must be an integer between 0 and 255`);
+        }
+        normalized.valueSize = entry.valueSize;
+      }
+      if (entry.requestValue !== void 0) {
+        const requestValue = this.normalizeRequestValue(entry.requestValue, `${location}.requestValue`);
+        const requestValueLength = requestValue.length;
+        if (normalized.valueSize !== void 0 && normalized.valueSize !== requestValueLength) {
+          throw new Error(
+            `${location}.valueSize (${normalized.valueSize}) must match ${location}.requestValue length (${requestValueLength})`
+          );
+        }
+        normalized.requestValue = requestValue;
+      }
+      return normalized;
+    });
+  }
+  /**
+   * Validates a read parameter identifier from a message payload.
+   *
+   * @param value - Raw parameter identifier
+   * @param fieldName - Field name for error reporting
+   */
+  validateReadParameterId(value, fieldName) {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 65535) {
+      throw new Error(`${fieldName} must be an integer between 0 and 65535`);
+    }
+    return value;
+  }
+  /**
+   * Normalizes request payload bytes and rejects invalid byte values early.
+   *
+   * @param requestValue - Raw request value from the message payload
+   * @param fieldName - Field name for error reporting
+   */
+  normalizeRequestValue(requestValue, fieldName) {
+    if (Buffer.isBuffer(requestValue)) {
+      return Buffer.from(requestValue);
+    }
+    if (requestValue instanceof Uint8Array) {
+      return new Uint8Array(requestValue);
+    }
+    if (Array.isArray(requestValue)) {
+      requestValue.forEach((value, index) => {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 255) {
+          throw new Error(`${fieldName}[${index}] must be an integer between 0 and 255`);
+        }
+      });
+      return requestValue.map((value) => value);
+    }
+    throw new Error(`${fieldName} must be a Buffer, Uint8Array or array of byte values`);
   }
   /**
    * Converts a parsed packet into a JSON-serializable payload for sendTo callbacks.
