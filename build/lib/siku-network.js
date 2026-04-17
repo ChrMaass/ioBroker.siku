@@ -128,6 +128,9 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
     };
     socket.on("error", finish);
     socket.on("message", (message, remoteInfo) => {
+      if (!message || !Buffer.isBuffer(message) || !remoteInfo) {
+        return;
+      }
       if (remoteInfo.address === host && remoteInfo.port === port) {
         finish(void 0, message);
       }
@@ -274,6 +277,9 @@ async function discoverDevices(options, dependencies = {}) {
     socket.setBroadcast(true);
     const devices = /* @__PURE__ */ new Map();
     socket.on("message", (message, remoteInfo) => {
+      if (!message || !Buffer.isBuffer(message) || !remoteInfo) {
+        return;
+      }
       if (isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)) {
         return;
       }

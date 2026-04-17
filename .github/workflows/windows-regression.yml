@@ -1,0 +1,27 @@
+name: Windows Regression
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '23 3 * * 6'
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: windows-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adapter-tests-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: ioBroker/testing-action-adapter@v1
+        with:
+          node-version: '22.x'
+          os: windows-latest
+          build: true

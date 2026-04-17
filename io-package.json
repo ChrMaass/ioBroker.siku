@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "siku",
-        "version": "0.0.1",
+        "version": "0.1.0",
         "news": {
+            "0.1.0": {
+                "en": "First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI",
+                "de": "Erste öffentliche Beta mit ioBroker-Publikationshärtung, verschlüsselten Geräte-Passwörtern und gestraffter CI",
+                "ru": "Первая публичная бета с подготовкой к публикации в ioBroker, шифрованием паролей устройств и оптимизированным CI",
+                "pt": "Primeira beta pública com preparação para publicação no ioBroker, senhas de dispositivos criptografadas e CI otimizada",
+                "nl": "Eerste publieke beta met ioBroker-publicatievoorbereiding, versleutelde apparaatwachtwoorden en gestroomlijnde CI",
+                "fr": "Première bêta publique avec préparation à la publication ioBroker, mots de passe d’appareil chiffrés et CI allégée",
+                "it": "Prima beta pubblica con preparazione alla pubblicazione su ioBroker, password dei dispositivi cifrate e CI ottimizzata",
+                "es": "Primera beta pública con preparación para la publicación en ioBroker, contraseñas de dispositivos cifradas y CI optimizada",
+                "pl": "Pierwsza publiczna beta z przygotowaniem do publikacji w ioBroker, szyfrowaniem haseł urządzeń i usprawnionym CI",
+                "uk": "Перша публічна бета з підготовкою до публікації в ioBroker, шифруванням паролів пристроїв і оптимізованим CI",
+                "zh-cn": "首个公开测试版，包含 ioBroker 收录准备、设备密码加密和精简后的 CI"
+            },
             "0.0.1": {
                 "en": "Beta with discovery, multi-device runtime, time checks and schedule support",
                 "de": "Beta mit Discovery, Multi-Device-Runtime, Zeitprüfung und Zeitplan-Unterstützung",
@@ -18,17 +31,17 @@
             }
         },
         "titleLang": {
-            "en": "SIKU Lüftung",
+            "en": "SIKU ventilation",
             "de": "SIKU Lüftung",
-            "ru": "СИКУ Люфтунг",
-            "pt": "SIKU Lüftung",
-            "nl": "SIKU Lüftung",
-            "fr": "SIKU Luftung",
-            "it": "SIKU Lüftung",
-            "es": "SIKU Luftung",
-            "pl": "SIKU Luftung",
-            "uk": "SIKU Lüftung",
-            "zh-cn": "SIKU 飞行"
+            "ru": "Вентиляция SIKU",
+            "pt": "Ventilação SIKU",
+            "nl": "SIKU-ventilatie",
+            "fr": "Ventilation SIKU",
+            "it": "Ventilazione SIKU",
+            "es": "Ventilación SIKU",
+            "pl": "Wentylacja SIKU",
+            "uk": "Вентиляція SIKU",
+            "zh-cn": "SIKU 通风"
         },
         "desc": {
             "en": "ioBroker adapter for SIKU RV V2 ventilation devices",
@@ -47,6 +60,7 @@
             "Christian Maaß <christian@maass.it>"
         ],
         "keywords": [
+            "ioBroker",
             "siku",
             "ventilation",
             "fan",
@@ -82,7 +96,8 @@
             {
                 "admin": ">=7.6.20"
             }
-        ]
+        ],
+        "title": "SIKU ventilation"
     },
     "native": {
         "pollIntervalSec": 30,
@@ -114,5 +129,11 @@
             },
             "native": {}
         }
+    ],
+    "protectedNative": [
+        "devices.password"
+    ],
+    "encryptedNative": [
+        "devices.password"
     ]
 }

@@ -17,7 +17,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,11 +28,11 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-check@v1
         with:
-          node-version: '22.x'
+          node-version: '20.x'
           type-checking: true
           lint: true
 
-  adapter-tests-pr:
+  adapter-tests-smoke:
     needs: check-and-lint
     if: |
       (github.event_name != 'push' || contains(github.event.head_commit.message, '[skip ci]') == false) &&
@@ -46,7 +46,7 @@ jobs:
           os: ubuntu-latest
           build: true
 
-  adapter-tests-main:
+  adapter-tests:
     needs: check-and-lint
     if: |
       (github.event_name != 'push' || contains(github.event.head_commit.message, '[skip ci]') == false) &&
@@ -64,8 +64,6 @@ jobs:
             os: ubuntu-latest
           - node-version: 22.x
             os: macos-latest
-          - node-version: 22.x
-            os: windows-latest
 
     steps:
       - uses: ioBroker/testing-action-adapter@v1
@@ -75,7 +73,7 @@ jobs:
           build: true
 
   deploy:
-    needs: [check-and-lint, adapter-tests-main]
+    needs: [check-and-lint, adapter-tests]
     if: |
       (github.event_name != 'push' || contains(github.event.head_commit.message, '[skip ci]') == false) &&
       github.event_name == 'push' &&
@@ -90,6 +88,6 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-deploy@v1
         with:
-          node-version: '22.x'
+          node-version: '20.x'
           build: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
