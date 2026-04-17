@@ -1,5 +1,9 @@
 import { expect } from 'chai';
-import { normalizeDiscoverMessagePayload, normalizeReadDeviceMessagePayload } from './siku-message-validation';
+import {
+    normalizeDiscoverMessagePayload,
+    normalizeReadDeviceMessagePayload,
+    normalizeSyncTimeDeviceMessagePayload,
+} from './siku-message-validation';
 
 describe('SIKU message payload validation', () => {
     it('normalizes a valid discover payload', () => {
@@ -44,6 +48,12 @@ describe('SIKU message payload validation', () => {
         });
     });
 
+    it('normalizes a valid syncTimeDevice payload', () => {
+        expect(normalizeSyncTimeDeviceMessagePayload({ deviceId: '001800354353530b' })).to.deep.equal({
+            deviceId: '001800354353530B',
+        });
+    });
+
     it('rejects invalid readDevice payload fields early', () => {
         expect(() =>
             normalizeReadDeviceMessagePayload({
@@ -55,10 +65,11 @@ describe('SIKU message payload validation', () => {
         ).to.throw('port must be an integer between 1 and 65535');
     });
 
-    it('rejects malformed discovery or read payload objects', () => {
+    it('rejects malformed discovery, read or sync payload objects', () => {
         expect(() => normalizeDiscoverMessagePayload(null)).to.throw('discover requires an object payload');
         expect(() => normalizeReadDeviceMessagePayload({ host: '192.168.55.46' })).to.throw(
             'parameters must be an array',
         );
+        expect(() => normalizeSyncTimeDeviceMessagePayload({})).to.throw('deviceId is required');
     });
 });

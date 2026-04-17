@@ -15,6 +15,8 @@ export const SIKU_REQUEST_RETRY_DELAYS_MS = [0, 200, 500] as const;
 export const SIKU_DISCOVERY_PARAMETERS = [0x007c, 0x00b9] as const;
 export const SIKU_PARAMETER_POWER = 0x0001;
 export const SIKU_PARAMETER_FAN_SPEED = 0x0002;
+export const SIKU_PARAMETER_RTC_TIME = 0x006f;
+export const SIKU_PARAMETER_RTC_CALENDAR = 0x0070;
 export const SIKU_PARAMETER_DEVICE_ID = 0x007c;
 export const SIKU_PARAMETER_IP_ADDRESS = 0x00a3;
 export const SIKU_PARAMETER_DEVICE_TYPE = 0x00b9;
@@ -26,6 +28,8 @@ export const SIKU_RUNTIME_POLL_PARAMETERS = [
     SIKU_PARAMETER_IP_ADDRESS,
     SIKU_PARAMETER_DEVICE_TYPE,
 ] as const;
+
+export const SIKU_TIME_CHECK_PARAMETERS = [SIKU_PARAMETER_RTC_TIME, SIKU_PARAMETER_RTC_CALENDAR] as const;
 
 export enum SikuFunction {
     Read = 0x01,
