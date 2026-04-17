@@ -43,16 +43,24 @@
             "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2",
             "zh-cn": "用于 SIKU RV V2 通风设备的 ioBroker 适配器"
         },
-        "authors": ["Christian Maaß <christian@maass.it>"],
-        "keywords": ["siku", "ventilation", "fan", "udp", "rv v2"],
+        "authors": [
+            "Christian Maaß <christian@maass.it>"
+        ],
+        "keywords": [
+            "siku",
+            "ventilation",
+            "fan",
+            "udp",
+            "rv v2"
+        ],
         "licenseInformation": {
             "type": "free",
             "license": "MIT"
         },
         "platform": "Javascript/Node.js",
-        "icon": "siku.png",
+        "icon": "siku.svg",
         "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/ChrMaass/ioBroker.siku/main/admin/siku.png",
+        "extIcon": "https://raw.githubusercontent.com/ChrMaass/ioBroker.siku/main/admin/siku.svg",
         "readme": "https://github.com/ChrMaass/ioBroker.siku/blob/main/README.md",
         "loglevel": "info",
         "tier": 3,
@@ -72,7 +80,7 @@
         ],
         "globalDependencies": [
             {
-                "admin": ">=7.0.23"
+                "admin": ">=7.6.20"
             }
         ]
     },

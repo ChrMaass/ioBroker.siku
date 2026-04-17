@@ -1,4 +1,4 @@
-![Logo](admin/siku.png)
+![Logo](admin/siku.svg)
 
 # ioBroker.siku
 
@@ -11,68 +11,83 @@
 
 **Tests:** ![Test and Release](https://github.com/ChrMaass/ioBroker.siku/workflows/Test%20and%20Release/badge.svg)
 
-## Adapter für ioBroker
+## Overview
 
-Dieser Adapter integriert Lüftungsgeräte der Serie **SIKU RV V2** in ioBroker.
+This adapter integrates **SIKU RV V2** residential ventilation devices into ioBroker.
 
-Der Entwicklungsstand in diesem Repository ist aktuell auf eine **Beta-Version** ausgerichtet.
+The current repository state targets a feature-complete **beta** for local-network operation.
 
-## Aktueller Funktionsumfang
+## Features
 
-- Kommunikation per UDP gemäß Herstellerprotokoll
-- Multi-Device-Betrieb in **einer** Adapter-Instanz
-- Broadcast-Discovery im lokalen Netzwerk
-- Admin-Konfiguration für mehrere Geräte
-- separater RTC-Zeitcheck standardmäßig alle 24 Stunden (konfigurierbar)
-- Zeitsynchronisation nur bei Drift über einer konfigurierbaren Schwelle
-- State-basierte Steuerung zentraler Betriebsparameter
-- vollständige Abbildung des Wochenzeitplans über ioBroker-States
+- UDP communication based on the documented manufacturer protocol
+- Multi-device support in **one** adapter instance
+- Broadcast discovery in the local network
+- JSON config based admin page for multiple devices
+- Separate RTC time check every 24 hours by default
+- Time synchronization only when the configured drift threshold is exceeded
+- State-based control for the main operating parameters
+- Full weekly schedule mapping via ioBroker states
+- Localized enum labels for fan mode and timer mode
+- Readable local timestamp companion states for poll and discovery timestamps
 
-## Unterstützte Kernfunktionen
+## Supported core functions
 
-- Erkennung von Master-Geräten per Broadcast (`0x007C`, `0x00B9`)
-- Verwaltung mehrerer Geräte über stabile Geräte-IDs
-- Polling von Status-, Sensor- und Diagnosewerten
-- Schreiben zentraler Parameter über States, z. B.:
-    - Ein/Aus
-    - Lüfterstufe
-    - manuelle Lüfterstufe
-    - Betriebsart
-    - Nacht-/Party-Timer
-    - Feuchte-Sollwert
-    - Sensor-Aktivierungen
-- Wochenzeitplan mit Struktur:
-    - `schedule.monday.p1.speed`
-    - `schedule.monday.p1.endHour`
-    - `schedule.monday.p1.endMinute`
-    - … bis `schedule.sunday.p4.*`
-- Diagnosewerte wie:
-    - Filter-Countdown
-    - Betriebsstunden
-    - Alarmstufe
-    - Filterwechselanzeige
-    - letzte Discovery / letzter Poll / letzte Zeitprüfung
+- Discovery of master devices via broadcast (`0x007C`, `0x00B9`)
+- Management of multiple devices by stable device IDs
+- Polling of status, sensor and diagnostic values
+- Writing of central parameters via states, for example:
+  - power
+  - fan speed
+  - manual fan speed
+  - fan mode
+  - timer mode
+  - humidity setpoint
+  - sensor enable flags
+- Weekly schedule structure such as:
+  - `schedule.monday.p1.speed`
+  - `schedule.monday.p1.endHour`
+  - `schedule.monday.p1.endMinute`
+  - ... up to `schedule.sunday.p4.*`
+- Diagnostic values such as:
+  - filter countdown
+  - operating hours
+  - alarm level
+  - filter replacement indication
+  - last discovery / last poll / last time check
 
-## Entwicklung
+## Device references
 
-Wichtige Skripte:
+The adapter is built for the SIKU RV V2 family such as **SIKU RV 50 W Pro WiFi V2** and related devices in the same protocol family.
 
-| Skript               | Zweck                                      |
-| -------------------- | ------------------------------------------ |
-| `npm run build`      | TypeScript kompilieren                     |
-| `npm run check`      | Type-Check ohne Build                      |
-| `npm run lint`       | Linting ausführen                          |
-| `npm run test`       | Unit-/Pakettests ausführen                 |
-| `npm run coverage`   | Test-Coverage ermitteln                    |
-| `npm run dev-server` | Lokale ioBroker-Entwicklung mit dev-server |
+- Manufacturer product page: [SIKU RV 50 W Pro WiFi V2](https://www.siku.at/SIKU-RV-50-W-Pro-WiFi-V2/50523)
+- Manufacturer overview: [SIKU products](https://www.siku.at/en/products/)
+- Official mobile app description: [SIKU RV WIFI on the App Store](https://apps.apple.com/at/app/siku-rv-wifi/id1444515926)
 
-Der Adapter wird mit dem offiziellen ioBroker-Tooling erzeugt und mit TypeScript entwickelt.
+## Development
 
-## Hinweise zum Beta-Status
+Useful scripts:
 
-- Discovery, Polling, Zeitcheck und Schedule-Reads wurden bereits gegen mehrere reale Geräte validiert.
-- Schreibende Live-Tests wurden bewusst nur sehr zurückhaltend durchgeführt.
-- Netzwerk-/Servicefunktionen wie WLAN-Rekonfiguration, Passwortänderung oder Reset sind aktuell **nicht** als normale States vorgesehen.
+| Script               | Purpose                                        |
+| -------------------- | ---------------------------------------------- |
+| `npm run build`      | Compile the TypeScript sources                 |
+| `npm run check`      | Run type checking without building             |
+| `npm run lint`       | Run ESLint                                     |
+| `npm run test`       | Run unit and package tests                     |
+| `npm run coverage`   | Generate test coverage for TypeScript tests    |
+| `npm run dev-server` | Start a local ioBroker development environment |
+| `npm run release`    | Create an official release/tag via release-tooling |
+
+The adapter was generated with the official ioBroker tooling and is developed in TypeScript.
+
+## Publication readiness
+
+A short release and repository checklist is available in [RELEASING.md](RELEASING.md).
+
+## Beta notes
+
+- Discovery, polling, time checks and schedule reads have already been validated against multiple real devices.
+- Live write tests have intentionally been kept conservative.
+- Network/service functions such as Wi-Fi reconfiguration, password changes or factory reset are intentionally not exposed as normal writable states.
 
 ## Changelog
 
@@ -83,9 +98,13 @@ Der Adapter wird mit dem offiziellen ioBroker-Tooling erzeugt und mit TypeScript
 
 ### **WORK IN PROGRESS**
 
-- (Christian Maaß) Broadcast-Discovery, Multi-Device-Runtime und separaten RTC-Zeitcheck ergänzt
-- (Christian Maaß) zentrale State-Mappings für sichere Betriebsparameter ergänzt
-- (Christian Maaß) vollständige Zeitplan-Abbildung für 7 Tage x 4 Perioden ergänzt
+- Added a vector-based adapter icon and publication readiness documentation
+- Added CI/CD hardening for tests, Dependabot auto-merge and release preparation
+
+### 0.0.1 (2026-04-17)
+
+- Initial beta with discovery, multi-device runtime, time checks and schedule support
+- Added localized mode enums, local timestamp companion states and timer countdown visibility
 
 ## License
 

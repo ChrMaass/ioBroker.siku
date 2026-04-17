@@ -157,7 +157,6 @@
                     "title": "devicePassword",
                     "width": "12%",
                     "default": "1111",
-                    "maxLength": 8,
                     "visible": true
                 },
                 {
