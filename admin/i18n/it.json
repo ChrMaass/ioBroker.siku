@@ -1,5 +1,8 @@
 {
-    "siku adapter settings": "Impostazioni dell'adattatore per siku",
-    "option1": "opzione1",
-    "option2": "opzione2"
+    "siku adapter settings": "Adapter settings for siku",
+    "pollIntervalSec": "Poll interval (seconds)",
+    "discoveryBroadcastAddress": "Broadcast address for discovery",
+    "timeCheckIntervalHours": "Time check every X hours",
+    "timeSyncThresholdSec": "Time sync only above drift of X seconds",
+    "configInfo": "Multi-device configuration and discovery actions will be added in the next development steps."
 }

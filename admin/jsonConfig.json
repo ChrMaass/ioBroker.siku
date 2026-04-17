@@ -4,7 +4,7 @@
     "items": {
         "pollIntervalSec": {
             "type": "number",
-            "label": "Poll-Intervall (Sekunden)",
+            "label": "pollIntervalSec",
             "newLine": true,
             "min": 5,
             "step": 1,
@@ -16,7 +16,7 @@
         },
         "discoveryBroadcastAddress": {
             "type": "text",
-            "label": "Broadcast-Adresse für Discovery",
+            "label": "discoveryBroadcastAddress",
             "newLine": true,
             "xs": 12,
             "sm": 12,
@@ -27,7 +27,7 @@
         },
         "timeCheckIntervalHours": {
             "type": "number",
-            "label": "Zeitprüfung alle X Stunden",
+            "label": "timeCheckIntervalHours",
             "newLine": true,
             "min": 24,
             "step": 1,
@@ -39,7 +39,7 @@
         },
         "timeSyncThresholdSec": {
             "type": "number",
-            "label": "Zeitsync erst ab Drift > X Sekunden",
+            "label": "timeSyncThresholdSec",
             "newLine": true,
             "min": 1,
             "step": 1,
@@ -52,7 +52,7 @@
         "configInfo": {
             "type": "staticText",
             "newLine": true,
-            "text": "Die Multi-Device-Konfiguration und Discovery-Aktionen werden in den nächsten Entwicklungsschritten ergänzt.",
+            "text": "configInfo",
             "xs": 12,
             "sm": 12,
             "md": 12,

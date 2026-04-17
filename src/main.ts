@@ -22,7 +22,7 @@ class Siku extends utils.Adapter {
         await this.setState('info.connection', false, true);
 
         this.log.info('Starte SIKU-Adapter im Bootstrap-Modus');
-        this.log.debug(`Konfiguration: ${JSON.stringify(this.config)}`);
+        this.logSafeConfig();
     }
 
     /**
@@ -53,6 +53,25 @@ class Siku extends utils.Adapter {
                 this.sendTo(obj.from, obj.command, { ok: false, error: 'Not implemented yet' }, obj.callback);
             }
         }
+    }
+
+    /**
+     * Logs a sanitized configuration snapshot without leaking device passwords into debug logs.
+     */
+    private logSafeConfig(): void {
+        const devices = this.config.devices ?? [];
+        const enabledDevices = devices.filter(device => device.enabled).length;
+
+        this.log.debug(
+            `Konfiguration: ${JSON.stringify({
+                pollIntervalSec: this.config.pollIntervalSec,
+                discoveryBroadcastAddress: this.config.discoveryBroadcastAddress,
+                timeCheckIntervalHours: this.config.timeCheckIntervalHours,
+                timeSyncThresholdSec: this.config.timeSyncThresholdSec,
+                configuredDevices: devices.length,
+                enabledDevices,
+            })}`,
+        );
     }
 }
 if (require.main !== module) {
