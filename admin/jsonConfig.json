@@ -1,0 +1,63 @@
+{
+    "i18n": true,
+    "type": "panel",
+    "items": {
+        "pollIntervalSec": {
+            "type": "number",
+            "label": "Poll-Intervall (Sekunden)",
+            "newLine": true,
+            "min": 5,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "discoveryBroadcastAddress": {
+            "type": "text",
+            "label": "Broadcast-Adresse für Discovery",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "placeholder": "255.255.255.255"
+        },
+        "timeCheckIntervalHours": {
+            "type": "number",
+            "label": "Zeitprüfung alle X Stunden",
+            "newLine": true,
+            "min": 24,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "timeSyncThresholdSec": {
+            "type": "number",
+            "label": "Zeitsync erst ab Drift > X Sekunden",
+            "newLine": true,
+            "min": 1,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "configInfo": {
+            "type": "staticText",
+            "newLine": true,
+            "text": "Die Multi-Device-Konfiguration und Discovery-Aktionen werden in den nächsten Entwicklungsschritten ergänzt.",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        }
+    }
+}
