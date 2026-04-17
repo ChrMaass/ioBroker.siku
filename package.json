@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "ioBroker adapter for SIKU RV V2 ventilation devices",
   "author": {
-    "name": "Christian Maa\u00df",
+    "name": "Christian Maaß",
     "email": "christian@maass.it"
   },
   "contributors": [],
@@ -38,6 +38,7 @@
     "@iobroker/testing": "^5.2.2",
     "@tsconfig/node20": "^20.1.9",
     "@types/iobroker": "npm:@iobroker/types@^7.1.1",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.39",
     "nyc": "^18.0.0",
     "rimraf": "^6.1.3",
