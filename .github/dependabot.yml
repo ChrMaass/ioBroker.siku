@@ -4,10 +4,11 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-      day: 2
       time: "00:05"
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 15
     assignees:
       - ChrMaass
     versioning-strategy: increase
@@ -16,9 +17,10 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-      day: 2
       time: "00:05"
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 15
     assignees:
       - ChrMaass

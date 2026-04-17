@@ -3,13 +3,14 @@
   "version": "0.0.1",
   "description": "ioBroker adapter for SIKU RV V2 ventilation devices",
   "author": {
-    "name": "Christian Maaß",
+    "name": "Christian Maa\u00df",
     "email": "christian@maass.it"
   },
   "contributors": [],
   "homepage": "https://github.com/ChrMaass/ioBroker.siku",
   "license": "MIT",
   "keywords": [
+    "ioBroker",
     "siku",
     "ventilation",
     "fan",
@@ -18,7 +19,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git@github.com:ChrMaass/ioBroker.siku.git"
+    "url": "git+https://github.com/ChrMaass/ioBroker.siku.git"
   },
   "engines": {
     "node": ">= 20"
@@ -55,11 +56,11 @@
   ],
   "scripts": {
     "prebuild": "rimraf build",
-    "build": "build-adapter ts",
-    "watch": "build-adapter ts --watch",
+    "build": "node --experimental-require-module ./node_modules/@iobroker/adapter-dev/build/build-adapter.js ts",
+    "watch": "node --experimental-require-module ./node_modules/@iobroker/adapter-dev/build/build-adapter.js ts --watch",
     "prebuild:ts": "rimraf build",
-    "build:ts": "build-adapter ts",
-    "watch:ts": "build-adapter ts --watch",
+    "build:ts": "node --experimental-require-module ./node_modules/@iobroker/adapter-dev/build/build-adapter.js ts",
+    "watch:ts": "node --experimental-require-module ./node_modules/@iobroker/adapter-dev/build/build-adapter.js ts --watch",
     "test:ts": "mocha --config test/mocharc.custom.json src/**/*.test.ts",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
