@@ -22,3 +22,6 @@ admin/i18n/*/flat.txt
 
 # local specification document, intentionally not part of the git repo
 BDA_Anschluss_SmartHome_RV_V2.pdf
+
+# local AI workflow instructions
+.github/copilot-instructions.md
