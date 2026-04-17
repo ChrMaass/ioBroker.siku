@@ -10,6 +10,7 @@ import {
     SIKU_PARAMETER_DEVICE_TYPE,
     SIKU_REQUEST_RETRY_DELAYS_MS,
     SIKU_REQUEST_TIMEOUT_MS,
+    SikuFunction,
 } from './siku-constants';
 import {
     buildDiscoveryPacket,
@@ -197,6 +198,10 @@ export function parseDiscoveryResponse(
     receivedAt: Date = new Date(),
 ): SikuDiscoveredDevice | null {
     const parsed = parsePacket(message);
+    if (!parsed.checksumValid || parsed.functionCode !== SikuFunction.Response) {
+        return null;
+    }
+
     const idEntry = parsed.entries.find(entry => entry.parameter === SIKU_PARAMETER_DEVICE_ID && !entry.unsupported);
     const deviceTypeEntry = parsed.entries.find(
         entry => entry.parameter === SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported,
@@ -237,7 +242,16 @@ export async function readDevicePacket(
                 payload,
                 options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
             );
-            return parsePacket(response);
+            const parsed = parsePacket(response);
+            if (!parsed.checksumValid) {
+                throw new Error(`Invalid checksum in response from ${options.host}`);
+            }
+            if (parsed.functionCode !== SikuFunction.Response) {
+                throw new Error(
+                    `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, '0')} in response from ${options.host}`,
+                );
+            }
+            return parsed;
         } catch (error) {
             lastError = error as Error;
         }

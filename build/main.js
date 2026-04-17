@@ -137,7 +137,7 @@ class Siku extends utils.Adapter {
     return parameters.map((parameter, index) => {
       const location = `parameters[${index}]`;
       if (typeof parameter === "number") {
-        return { parameter: this.validateReadParameterId(parameter, `${location}.parameter`) };
+        return { parameter: this.validateReadParameterId(parameter, location) };
       }
       if (typeof parameter !== "object" || parameter === null) {
         throw new Error(`${location} must be a number or an object`);
