@@ -1,0 +1,8 @@
+{
+    "siku adapter settings": "Adaptereinstellungen für siku",
+    "pollIntervalSec": "Poll-Intervall (Sekunden)",
+    "discoveryBroadcastAddress": "Broadcast-Adresse für Discovery",
+    "timeCheckIntervalHours": "Zeitprüfung alle X Stunden",
+    "timeSyncThresholdSec": "Zeitsync erst ab Drift > X Sekunden",
+    "configInfo": "Die Multi-Device-Konfiguration und Discovery-Aktionen werden in den nächsten Entwicklungsschritten ergänzt."
+}

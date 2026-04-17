@@ -1,0 +1,118 @@
+{
+    "common": {
+        "name": "siku",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "uk": "Початкова версія",
+                "zh-cn": "首次出版"
+            }
+        },
+        "titleLang": {
+            "en": "SIKU Lüftung",
+            "de": "SIKU Lüftung",
+            "ru": "СИКУ Люфтунг",
+            "pt": "SIKU Lüftung",
+            "nl": "SIKU Lüftung",
+            "fr": "SIKU Luftung",
+            "it": "SIKU Lüftung",
+            "es": "SIKU Luftung",
+            "pl": "SIKU Luftung",
+            "uk": "SIKU Lüftung",
+            "zh-cn": "SIKU 飞行"
+        },
+        "desc": {
+            "en": "ioBroker adapter for SIKU RV V2 ventilation devices",
+            "de": "ioBroker-Adapter für SIKU RV V2 Beatmungsgeräte",
+            "ru": "Адаптер ioBroker для аппаратов вентиляции SIKU RV V2",
+            "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2",
+            "nl": "ioBroker-adapter voor SIKU RV V2-ventilatieapparaten",
+            "fr": "Adaptateur ioBroker pour appareils de ventilation SIKU RV V2",
+            "it": "Adattatore ioBroker per dispositivi di ventilazione SIKU RV V2",
+            "es": "Adaptador ioBroker para dispositivos de ventilación SIKU RV V2",
+            "pl": "Adapter ioBroker do urządzeń wentylacyjnych SIKU RV V2",
+            "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2",
+            "zh-cn": "用于 SIKU RV V2 通风设备的 ioBroker 适配器"
+        },
+        "authors": [
+            "Christian Maaß <christian@maass.it>"
+        ],
+        "keywords": [
+            "siku",
+            "ventilation",
+            "fan",
+            "udp",
+            "rv v2"
+        ],
+        "licenseInformation": {
+            "type": "free",
+            "license": "MIT"
+        },
+        "platform": "Javascript/Node.js",
+        "icon": "siku.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/ChrMaass/ioBroker.siku/main/admin/siku.png",
+        "readme": "https://github.com/ChrMaass/ioBroker.siku/blob/main/README.md",
+        "loglevel": "info",
+        "tier": 3,
+        "mode": "daemon",
+        "type": "climate-control",
+        "compact": true,
+        "messagebox": true,
+        "connectionType": "local",
+        "dataSource": "poll",
+        "adminUI": {
+            "config": "json"
+        },
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.0.23"
+            }
+        ]
+    },
+    "native": {
+        "pollIntervalSec": 30,
+        "discoveryBroadcastAddress": "255.255.255.255",
+        "timeCheckIntervalHours": 24,
+        "timeSyncThresholdSec": 10,
+        "devices": []
+    },
+    "objects": [],
+    "instanceObjects": [
+        {
+            "_id": "info",
+            "type": "channel",
+            "common": {
+                "name": "Information"
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "role": "indicator.connected",
+                "name": "Device or service connected",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        }
+    ]
+}
