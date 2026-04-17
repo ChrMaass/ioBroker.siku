@@ -241,6 +241,60 @@ describe('SIKU network helpers', () => {
         expect(packet.functionCode).to.equal(SikuFunction.Response);
     });
 
+    it('uses the target port as local request port by default for read and write traffic', async () => {
+        const observedLocalPorts: number[] = [];
+
+        await readDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                port: 4000,
+                parameters: [{ parameter: 0x0001 }],
+            },
+            {
+                requestOnce: (_host, _port, _payload, _timeoutMs, localPort) => {
+                    observedLocalPorts.push(localPort);
+                    return Promise.resolve(
+                        buildPacket(
+                            Buffer.from('001800354353530B', 'ascii'),
+                            '1111',
+                            SikuFunction.Response,
+                            Buffer.from([0x01, 0x02]),
+                        ),
+                    );
+                },
+                delay: () => Promise.resolve(),
+            },
+        );
+
+        await writeDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                port: 4000,
+                parameters: [{ parameter: 0x006f, value: [3, 4, 5] }],
+            },
+            {
+                requestOnce: (_host, _port, _payload, _timeoutMs, localPort) => {
+                    observedLocalPorts.push(localPort);
+                    return Promise.resolve(
+                        buildPacket(
+                            Buffer.from('001800354353530B', 'ascii'),
+                            '1111',
+                            SikuFunction.Response,
+                            Buffer.from([0xfe, 0x03, 0x6f, 0x03, 0x04, 0x05]),
+                        ),
+                    );
+                },
+                delay: () => Promise.resolve(),
+            },
+        );
+
+        expect(observedLocalPorts).to.deep.equal([4000, 4000]);
+    });
+
     it('writes RTC values via function 0x03 and validates the response', async () => {
         const packet = await writeDevicePacket(
             {

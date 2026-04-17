@@ -77,6 +77,7 @@ interface TimeCheckSummary {
 class Siku extends utils.Adapter {
     private readonly runtimeDevices = new Map<string, SikuRuntimeDeviceConfig>();
     private readonly deviceOperationQueues = new Map<string, Promise<unknown>>();
+    private networkOperationQueue: Promise<void> = Promise.resolve();
     private pollCycleRunning = false;
     private timeCheckRunning = false;
     private pollIntervalHandle: ioBroker.Interval | undefined;
@@ -194,12 +195,14 @@ class Siku extends utils.Adapter {
                 const request = isScheduleStateId(relativeId)
                     ? await this.buildScheduleWriteRequestForState(fullStateId, relativeId, state.val)
                     : buildWriteRequestForState(relativeId, state.val);
-                const responsePacket = await writeDevicePacket({
-                    host: device.host,
-                    deviceId: device.id,
-                    password: device.password,
-                    parameters: [request],
-                });
+                const responsePacket = await this.enqueueNetworkOperation(() =>
+                    writeDevicePacket({
+                        host: device.host,
+                        deviceId: device.id,
+                        password: device.password,
+                        parameters: [request],
+                    }),
+                );
 
                 const mappedUpdates = decodeMappedStateUpdates(responsePacket);
                 const scheduleUpdates = decodeScheduleUpdates(responsePacket);
@@ -233,12 +236,14 @@ class Siku extends utils.Adapter {
      */
     private async handleDiscoverMessage(obj: ioBroker.Message): Promise<void> {
         const payload = normalizeDiscoverMessagePayload(obj.message ?? {});
-        const devices = await discoverDevices({
-            broadcastAddress: payload.broadcastAddress ?? this.config.discoveryBroadcastAddress,
-            password: payload.password,
-            timeoutMs: payload.timeoutMs,
-            preferredBindPort: payload.preferredBindPort,
-        });
+        const devices = await this.enqueueNetworkOperation(() =>
+            discoverDevices({
+                broadcastAddress: payload.broadcastAddress ?? this.config.discoveryBroadcastAddress,
+                password: payload.password,
+                timeoutMs: payload.timeoutMs,
+                preferredBindPort: payload.preferredBindPort,
+            }),
+        );
 
         await this.applyDiscoveryResults(devices);
 
@@ -269,14 +274,16 @@ class Siku extends utils.Adapter {
     private async handleReadDeviceMessage(obj: ioBroker.Message): Promise<void> {
         const payload = normalizeReadDeviceMessagePayload(obj.message);
 
-        const packet = await readDevicePacket({
-            host: payload.host,
-            deviceId: payload.deviceId,
-            password: payload.password ?? SIKU_DEFAULT_PASSWORD,
-            port: payload.port,
-            timeoutMs: payload.timeoutMs,
-            parameters: this.normalizeReadParameters(payload.parameters),
-        });
+        const packet = await this.enqueueNetworkOperation(() =>
+            readDevicePacket({
+                host: payload.host,
+                deviceId: payload.deviceId,
+                password: payload.password ?? SIKU_DEFAULT_PASSWORD,
+                port: payload.port,
+                timeoutMs: payload.timeoutMs,
+                parameters: this.normalizeReadParameters(payload.parameters),
+            }),
+        );
 
         this.sendMessageResponse(obj, { ok: true, packet: this.serializePacket(packet) });
     }
@@ -459,6 +466,9 @@ class Siku extends utils.Adapter {
         const pollStartedAtIso = pollStartedAt.toISOString();
         const pollStartedMs = Date.now();
         const prefix = device.objectId;
+        const basePollParameters = Array.from(new Set([...SIKU_RUNTIME_POLL_PARAMETERS, ...SIKU_POLL_PARAMETERS])).map(
+            parameter => ({ parameter }),
+        );
 
         if (!device.enabled) {
             await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
@@ -468,24 +478,62 @@ class Siku extends utils.Adapter {
         await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
 
         try {
-            const packet = await this.enqueueDeviceOperation(device.id, async () =>
-                readDevicePacket({
-                    host: device.host,
-                    deviceId: device.id,
-                    password: device.password,
-                    parameters: [
-                        ...Array.from(new Set([...SIKU_RUNTIME_POLL_PARAMETERS, ...SIKU_POLL_PARAMETERS])).map(
-                            parameter => ({ parameter }),
-                        ),
-                        ...buildScheduleReadRequests(),
-                    ],
-                }),
+            const { basePacket, schedulePacket, scheduleReadError } = await this.enqueueDeviceOperation(
+                device.id,
+                async () => {
+                    const basePacket = await this.enqueueNetworkOperation(() =>
+                        readDevicePacket({
+                            host: device.host,
+                            deviceId: device.id,
+                            password: device.password,
+                            parameters: basePollParameters,
+                        }),
+                    );
+
+                    let schedulePacket: ParsedSikuPacket | undefined;
+                    let scheduleReadError: string | undefined;
+
+                    try {
+                        schedulePacket = await this.enqueueNetworkOperation(() =>
+                            readDevicePacket({
+                                host: device.host,
+                                deviceId: device.id,
+                                password: device.password,
+                                parameters: buildScheduleReadRequests(),
+                            }),
+                        );
+                    } catch (error) {
+                        scheduleReadError = (error as Error).message;
+                    }
+
+                    return {
+                        basePacket,
+                        schedulePacket,
+                        scheduleReadError,
+                    };
+                },
             );
-            const snapshot = decodePollSnapshot(device.id, packet, pollStartedAt);
+            const snapshot = decodePollSnapshot(device.id, basePacket, pollStartedAt);
 
             await this.applyPollSnapshot(device, snapshot, pollStartedAtIso, Date.now() - pollStartedMs);
-            await this.applyMappedStateUpdates(device, decodeMappedStateUpdates(packet));
-            await this.applyMappedStateUpdates(device, decodeScheduleUpdates(packet));
+            await this.applyMappedStateUpdates(device, decodeMappedStateUpdates(basePacket));
+
+            if (schedulePacket) {
+                await this.applyMappedStateUpdates(device, decodeScheduleUpdates(schedulePacket));
+            }
+
+            await this.setStateChangedAsync(
+                `${prefix}.diagnostics.lastError`,
+                scheduleReadError ? `Zeitplan lesen: ${scheduleReadError}` : '',
+                true,
+            );
+
+            if (scheduleReadError) {
+                this.log.warn(
+                    `Zeitplan-Lesen fehlgeschlagen für ${device.name} (${device.id}) via ${device.host}: ${scheduleReadError}`,
+                );
+            }
+
             this.log.debug(`Polling erfolgreich für ${device.name} (${device.id}) via ${device.host} [${trigger}]`);
             return true;
         } catch (error) {
@@ -592,12 +640,14 @@ class Siku extends utils.Adapter {
 
         try {
             const packet = await this.enqueueDeviceOperation(device.id, async () =>
-                readDevicePacket({
-                    host: device.host,
-                    deviceId: device.id,
-                    password: device.password,
-                    parameters: SIKU_TIME_CHECK_PARAMETERS.map(parameter => ({ parameter })),
-                }),
+                this.enqueueNetworkOperation(() =>
+                    readDevicePacket({
+                        host: device.host,
+                        deviceId: device.id,
+                        password: device.password,
+                        parameters: SIKU_TIME_CHECK_PARAMETERS.map(parameter => ({ parameter })),
+                    }),
+                ),
             );
             const rtcSnapshot = decodeRtcSnapshot(packet);
             const referenceTime = new Date();
@@ -626,15 +676,17 @@ class Siku extends utils.Adapter {
 
             const syncDate = new Date();
             await this.enqueueDeviceOperation(device.id, async () =>
-                writeDevicePacket({
-                    host: device.host,
-                    deviceId: device.id,
-                    password: device.password,
-                    parameters: [
-                        { parameter: SIKU_PARAMETER_RTC_TIME, value: encodeRtcTime(syncDate) },
-                        { parameter: SIKU_PARAMETER_RTC_CALENDAR, value: encodeRtcCalendar(syncDate) },
-                    ],
-                }),
+                this.enqueueNetworkOperation(() =>
+                    writeDevicePacket({
+                        host: device.host,
+                        deviceId: device.id,
+                        password: device.password,
+                        parameters: [
+                            { parameter: SIKU_PARAMETER_RTC_TIME, value: encodeRtcTime(syncDate) },
+                            { parameter: SIKU_PARAMETER_RTC_CALENDAR, value: encodeRtcCalendar(syncDate) },
+                        ],
+                    }),
+                ),
             );
             const syncedAtIso = syncDate.toISOString();
 
@@ -1233,13 +1285,49 @@ class Siku extends utils.Adapter {
      */
     private async enqueueDeviceOperation<T>(deviceId: string, operation: () => Promise<T>): Promise<T> {
         const previous = this.deviceOperationQueues.get(deviceId) ?? Promise.resolve();
-        const next = previous.catch(() => undefined).then(operation);
-        const settled = next.finally(() => {
-            if (this.deviceOperationQueues.get(deviceId) === settled) {
+        const next = previous
+            .then(
+                () => undefined,
+                () => undefined,
+            )
+            .then(() => operation());
+        const tracked = next.then(
+            () => undefined,
+            () => undefined,
+        );
+        const cleanup = tracked.finally(() => {
+            if (this.deviceOperationQueues.get(deviceId) === cleanup) {
                 this.deviceOperationQueues.delete(deviceId);
             }
         });
-        this.deviceOperationQueues.set(deviceId, settled);
+        this.deviceOperationQueues.set(deviceId, cleanup);
+        return next;
+    }
+
+    /**
+     * Serializes UDP socket usage globally because the SIKU devices answer request traffic
+     * reliably only on the shared well-known local port 4000.
+     *
+     * @param operation - Async network operation that should use the shared UDP slot
+     */
+    private async enqueueNetworkOperation<T>(operation: () => Promise<T>): Promise<T> {
+        const previous = this.networkOperationQueue;
+        const next = previous
+            .then(
+                () => undefined,
+                () => undefined,
+            )
+            .then(() => operation());
+        const tracked = next.then(
+            () => undefined,
+            () => undefined,
+        );
+        const cleanup = tracked.finally(() => {
+            if (this.networkOperationQueue === cleanup) {
+                this.networkOperationQueue = Promise.resolve();
+            }
+        });
+        this.networkOperationQueue = cleanup;
         return next;
     }
 

@@ -46,6 +46,7 @@ export interface SikuReadDeviceOptions {
     password: string;
     parameters: SikuReadRequestEntry[];
     port?: number;
+    localPort?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
 }
@@ -56,6 +57,7 @@ export interface SikuWriteDeviceOptions {
     password: string;
     parameters: SikuWriteRequestEntry[];
     port?: number;
+    localPort?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
 }
@@ -70,7 +72,13 @@ interface SikuDiscoverySocket {
 
 export interface SikuNetworkDependencies {
     bindSocketWithFallback?: (preferredPort: number) => Promise<SikuDiscoverySocket>;
-    requestOnce?: (host: string, port: number, payload: Buffer, timeoutMs: number) => Promise<Buffer>;
+    requestOnce?: (
+        host: string,
+        port: number,
+        payload: Buffer,
+        timeoutMs: number,
+        localPort: number,
+    ) => Promise<Buffer>;
     delay?: (timeoutMs: number) => Promise<unknown>;
     getLocalIPv4Addresses?: () => Set<string>;
     now?: () => Date;
@@ -123,8 +131,39 @@ async function bindSocketWithFallback(preferredPort: number): Promise<dgram.Sock
     throw new Error('Unable to bind UDP socket for discovery');
 }
 
-async function requestOnce(host: string, port: number, payload: Buffer, timeoutMs: number): Promise<Buffer> {
-    const socket = dgram.createSocket('udp4');
+async function bindRequestSocket(localPort: number): Promise<dgram.Socket> {
+    const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+
+    await new Promise<void>((resolve, reject) => {
+        function onListening(): void {
+            socket.off('error', onError);
+            resolve();
+        }
+
+        function onError(error: Error): void {
+            socket.off('listening', onListening);
+            reject(error);
+        }
+
+        socket.once('error', onError);
+        socket.once('listening', onListening);
+        socket.bind(localPort);
+    }).catch(error => {
+        socket.close();
+        throw new Error(`Unable to bind UDP request socket to local port ${localPort}: ${(error as Error).message}`);
+    });
+
+    return socket;
+}
+
+async function requestOnce(
+    host: string,
+    port: number,
+    payload: Buffer,
+    timeoutMs: number,
+    localPort: number = port,
+): Promise<Buffer> {
+    const socket = await bindRequestSocket(localPort);
 
     return new Promise<Buffer>((resolve, reject) => {
         let finished = false;
@@ -159,16 +198,14 @@ async function requestOnce(host: string, port: number, payload: Buffer, timeoutM
                 finish(undefined, message);
             }
         });
-        socket.bind(0, () => {
-            socket.send(payload, port, host, error => {
-                if (error) {
-                    finish(error);
-                    return;
-                }
-                timeoutHandle = setTimeout(() => {
-                    finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
-                }, timeoutMs);
-            });
+        socket.send(payload, port, host, error => {
+            if (error) {
+                finish(error);
+                return;
+            }
+            timeoutHandle = setTimeout(() => {
+                finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
+            }, timeoutMs);
         });
     });
 }
@@ -178,6 +215,7 @@ async function executeRequestWithRetries(
     port: number,
     payload: Buffer,
     timeoutMs: number,
+    localPort: number,
     retryDelaysMs: readonly number[],
     dependencies: SikuNetworkDependencies,
 ): Promise<ParsedSikuPacket> {
@@ -191,7 +229,7 @@ async function executeRequestWithRetries(
                 await wait(retryDelay);
             }
 
-            const response = await request(host, port, payload, timeoutMs);
+            const response = await request(host, port, payload, timeoutMs, localPort);
             const parsed = parsePacket(response);
             if (!parsed.checksumValid) {
                 throw new Error(`Invalid checksum in response from ${host}`);
@@ -327,6 +365,7 @@ export async function readDevicePacket(
         options.port ?? SIKU_DEFAULT_PORT,
         payload,
         options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
+        options.localPort ?? options.port ?? SIKU_DEFAULT_PORT,
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
         dependencies,
     );
@@ -349,6 +388,7 @@ export async function writeDevicePacket(
         options.port ?? SIKU_DEFAULT_PORT,
         payload,
         options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
+        options.localPort ?? options.port ?? SIKU_DEFAULT_PORT,
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
         dependencies,
     );
