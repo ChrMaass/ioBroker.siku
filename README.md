@@ -23,8 +23,8 @@ Der Entwicklungsstand in diesem Repository ist aktuell auf eine **Beta-Version**
 - Multi-Device-Betrieb in **einer** Adapter-Instanz
 - Broadcast-Discovery im lokalen Netzwerk
 - Admin-Konfiguration für mehrere Geräte
-- separater RTC-Zeitcheck alle 24 Stunden
-- Zeitsynchronisation nur bei Drift über konfigurierbarer Schwelle
+- separater RTC-Zeitcheck standardmäßig alle 24 Stunden (konfigurierbar)
+- Zeitsynchronisation nur bei Drift über einer konfigurierbaren Schwelle
 - State-basierte Steuerung zentraler Betriebsparameter
 - vollständige Abbildung des Wochenzeitplans über ioBroker-States
 
