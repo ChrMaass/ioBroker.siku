@@ -133,7 +133,6 @@ class Siku extends utils.Adapter {
     const { device, relativeId, fullStateId } = resolved;
     try {
       await this.enqueueDeviceOperation(device.id, async () => {
-        var _a;
         const request = (0, import_siku_schedule.isScheduleStateId)(relativeId) ? await this.buildScheduleWriteRequestForState(fullStateId, relativeId, state.val) : (0, import_siku_state_mapping.buildWriteRequestForState)(relativeId, state.val);
         const responsePacket = await (0, import_siku_network.writeDevicePacket)({
           host: device.host,
@@ -141,18 +140,15 @@ class Siku extends utils.Adapter {
           password: device.password,
           parameters: [request]
         });
-        await this.applyMappedStateUpdates(device, (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket));
-        await this.applyMappedStateUpdates(device, (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket));
+        const mappedUpdates = (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket);
+        const scheduleUpdates = (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket);
+        await this.applyMappedStateUpdates(device, mappedUpdates);
+        await this.applyMappedStateUpdates(device, scheduleUpdates);
         if ((0, import_siku_schedule.isScheduleStateId)(relativeId)) {
           return;
         }
         if ((0, import_siku_state_mapping.isButtonState)(relativeId)) {
           await this.setStateChangedAsync(fullStateId, false, true);
-        } else {
-          const updatedValue = (_a = (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket).find(
-            (update) => update.relativeId === relativeId
-          )) == null ? void 0 : _a.value;
-          await this.setStateChangedAsync(fullStateId, updatedValue != null ? updatedValue : state.val, true);
         }
         await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, "", true);
       });
@@ -1043,11 +1039,18 @@ class Siku extends utils.Adapter {
    * @param value - New user-provided value
    */
   async buildScheduleWriteRequestForState(fullStateId, relativeId, value) {
-    var _a;
     const values = {};
+    const namespacePrefix = `${this.namespace}.`;
+    const relativeNamespaceId = fullStateId.startsWith(namespacePrefix) ? fullStateId.slice(namespacePrefix.length) : fullStateId;
     for (const snapshotRelativeId of (0, import_siku_schedule.getScheduleSnapshotStateIds)(relativeId)) {
-      const state = await this.getStateAsync(fullStateId.replace(relativeId, snapshotRelativeId));
-      values[snapshotRelativeId] = (_a = state == null ? void 0 : state.val) != null ? _a : 0;
+      const snapshotStateId = relativeNamespaceId.replace(relativeId, snapshotRelativeId);
+      const state = await this.getStateAsync(snapshotStateId);
+      if ((state == null ? void 0 : state.val) === void 0 || state.val === null) {
+        throw new Error(
+          `Zeitplan-Schreibvorgang abgebrochen: Snapshot-State "${this.namespace}.${snapshotStateId}" ist nicht vorhanden oder hat keinen Wert.`
+        );
+      }
+      values[snapshotRelativeId] = state.val;
     }
     values[relativeId] = value;
     return (0, import_siku_schedule.buildScheduleWriteRequest)(relativeId, values);
