@@ -1,24 +1,79 @@
-/**
- * This is a dummy TypeScript test file using chai and mocha
- *
- * It's automatically excluded from npm and its build output is excluded from both git and npm.
- * It is advised to test all your modules with accompanying *.test.ts-files
- */
-
 import { expect } from 'chai';
-// import { functionToTest } from "./moduleToTest";
+import {
+    buildDiscoveryPacket,
+    buildPacket,
+    buildReadPayload,
+    decodeAscii,
+    decodeUnsignedLE,
+    parsePacket,
+    toHex,
+} from './lib/siku-protocol';
+import { SikuFunction } from './lib/siku-constants';
 
-describe('module to test => function to test', () => {
-    // initializing logic
-    const expected = 5;
+describe('SIKU protocol helpers', () => {
+    it('builds the broadcast discovery packet from the validated live sample', () => {
+        const packet = buildDiscoveryPacket();
 
-    it(`should return ${expected}`, () => {
-        const result = 5;
-        // assign result a value from functionToTest
-        expect(result).to.equal(expected);
-        // or using the should() syntax
-        result.should.equal(expected);
+        expect(toHex(packet)).to.equal('FDFD021044454641554C545F44455649434549440431313131017CB9B106');
     });
-    // ... more tests => it
+
+    it('builds the PDF request example with a zeroed device id correctly', () => {
+        const packet = buildPacket(Buffer.alloc(16), '1111', SikuFunction.Read, Buffer.from([0x01, 0x02]));
+
+        expect(toHex(packet)).to.equal('FDFD0210000000000000000000000000000000000431313131010102DE00');
+    });
+
+    it('builds an extended read payload for the schedule selector', () => {
+        const payload = buildReadPayload([{ parameter: 0x0077, requestValue: [0x01, 0x01] }]);
+
+        expect(toHex(payload)).to.equal('FE02770101');
+    });
+
+    it('parses the PDF response example with two single-byte values', () => {
+        const packet = Buffer.from('FDFD02100000000000000000000000000000000004313131310601000203E600', 'hex');
+        const parsed = parsePacket(packet);
+
+        expect(parsed.checksumValid).to.equal(true);
+        expect(parsed.functionCode).to.equal(SikuFunction.Response);
+        expect(parsed.entries).to.have.length(2);
+        expect(parsed.entries[0].parameter).to.equal(0x0001);
+        expect(parsed.entries[0].value[0]).to.equal(0x00);
+        expect(parsed.entries[1].parameter).to.equal(0x0002);
+        expect(parsed.entries[1].value[0]).to.equal(0x03);
+    });
+
+    it('parses the PDF sample with page switches and an unsupported parameter', () => {
+        const packet = buildPacket(
+            Buffer.alloc(16),
+            '1111',
+            SikuFunction.Response,
+            Buffer.from([0xff, 0x01, 0xfd, 0x01, 0x04, 0x05, 0xff, 0x02, 0xfe, 0x02, 0x40, 0x51, 0x68]),
+        );
+        const parsed = parsePacket(packet);
+
+        expect(parsed.checksumValid).to.equal(true);
+        expect(parsed.entries).to.have.length(3);
+        expect(parsed.entries[0]).to.deep.include({ parameter: 0x0101, unsupported: true, size: 0 });
+        expect(parsed.entries[1].parameter).to.equal(0x0104);
+        expect(parsed.entries[1].value[0]).to.equal(0x05);
+        expect(parsed.entries[2].parameter).to.equal(0x0240);
+        expect(toHex(parsed.entries[2].value)).to.equal('5168');
+    });
+
+    it('parses a captured discovery response from the live network correctly', () => {
+        const packet = Buffer.from(
+            'FDFD0210303031383030333534333533353330420006FE02B90E00FE107C30303138303033353433353335333042DD09',
+            'hex',
+        );
+        const parsed = parsePacket(packet);
+        const typeEntry = parsed.entries.find(entry => entry.parameter === 0x00b9);
+        const idEntry = parsed.entries.find(entry => entry.parameter === 0x007c);
+
+        expect(parsed.checksumValid).to.equal(true);
+        expect(parsed.deviceIdText).to.equal('001800354353530B');
+        expect(typeEntry).to.not.equal(undefined);
+        expect(idEntry).to.not.equal(undefined);
+        expect(decodeUnsignedLE(typeEntry!.value)).to.equal(14);
+        expect(decodeAscii(idEntry!.value)).to.equal('001800354353530B');
+    });
 });
-// ... more test suites => describe
