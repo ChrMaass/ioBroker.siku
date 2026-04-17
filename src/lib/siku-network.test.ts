@@ -3,7 +3,13 @@ import type { AddressInfo } from 'node:net';
 import { expect } from 'chai';
 import { buildDiscoveryPacket, buildPacket, decodeUnsignedLE } from './siku-protocol';
 import { SikuFunction } from './siku-constants';
-import { discoverDevices, isDiscoverySelfEcho, parseDiscoveryResponse, readDevicePacket } from './siku-network';
+import {
+    discoverDevices,
+    isDiscoverySelfEcho,
+    parseDiscoveryResponse,
+    readDevicePacket,
+    writeDevicePacket,
+} from './siku-network';
 
 class FakeDiscoverySocket extends EventEmitter {
     public broadcastEnabled = false;
@@ -233,6 +239,66 @@ describe('SIKU network helpers', () => {
         expect(waitCalls).to.deep.equal([200]);
         expect(packet.checksumValid).to.equal(true);
         expect(packet.functionCode).to.equal(SikuFunction.Response);
+    });
+
+    it('writes RTC values via function 0x03 and validates the response', async () => {
+        const packet = await writeDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [
+                    { parameter: 0x006f, value: [3, 4, 5] },
+                    { parameter: 0x0070, value: [17, 5, 4, 26] },
+                ],
+            },
+            {
+                requestOnce: () =>
+                    Promise.resolve(
+                        buildPacket(
+                            Buffer.from('001800354353530B', 'ascii'),
+                            '1111',
+                            SikuFunction.Response,
+                            Buffer.from([0xfe, 0x03, 0x6f, 0x03, 0x04, 0x05, 0xfe, 0x04, 0x70, 0x11, 0x05, 0x04, 0x1a]),
+                        ),
+                    ),
+                delay: () => Promise.resolve(),
+            },
+        );
+
+        expect(packet.functionCode).to.equal(SikuFunction.Response);
+        expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x006f, 0x0070]);
+    });
+
+    it('rejects write responses that do not echo the requested values', async () => {
+        let thrownError: Error | undefined;
+
+        try {
+            await writeDevicePacket(
+                {
+                    host: '192.168.55.46',
+                    deviceId: '001800354353530B',
+                    password: '1111',
+                    parameters: [{ parameter: 0x006f, value: [3, 4, 5] }],
+                },
+                {
+                    requestOnce: () =>
+                        Promise.resolve(
+                            buildPacket(
+                                Buffer.from('001800354353530B', 'ascii'),
+                                '1111',
+                                SikuFunction.Response,
+                                Buffer.from([0xfe, 0x03, 0x6f, 0x04, 0x04, 0x05]),
+                            ),
+                        ),
+                    delay: () => Promise.resolve(),
+                },
+            );
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(thrownError?.message).to.equal('Write response mismatch for parameter 0x006f from 192.168.55.46');
     });
 
     it('throws the last network error once all retries are exhausted', async () => {

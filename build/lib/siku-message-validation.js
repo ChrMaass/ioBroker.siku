@@ -19,7 +19,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var siku_message_validation_exports = {};
 __export(siku_message_validation_exports, {
   normalizeDiscoverMessagePayload: () => normalizeDiscoverMessagePayload,
-  normalizeReadDeviceMessagePayload: () => normalizeReadDeviceMessagePayload
+  normalizeReadDeviceMessagePayload: () => normalizeReadDeviceMessagePayload,
+  normalizeSyncTimeDeviceMessagePayload: () => normalizeSyncTimeDeviceMessagePayload
 });
 module.exports = __toCommonJS(siku_message_validation_exports);
 var import_siku_constants = require("./siku-constants");
@@ -92,9 +93,16 @@ function normalizeReadDeviceMessagePayload(message) {
     parameters
   };
 }
+function normalizeSyncTimeDeviceMessagePayload(message) {
+  const payload = getObjectPayload(message, "syncTimeDevice");
+  return {
+    deviceId: getRequiredStringField(payload, "deviceId", { exactLength: import_siku_constants.SIKU_DEVICE_ID_LENGTH }).toUpperCase()
+  };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   normalizeDiscoverMessagePayload,
-  normalizeReadDeviceMessagePayload
+  normalizeReadDeviceMessagePayload,
+  normalizeSyncTimeDeviceMessagePayload
 });
 //# sourceMappingURL=siku-message-validation.js.map
