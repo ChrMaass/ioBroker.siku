@@ -1,0 +1,63 @@
+{
+    "i18n": true,
+    "type": "panel",
+    "items": {
+        "pollIntervalSec": {
+            "type": "number",
+            "label": "pollIntervalSec",
+            "newLine": true,
+            "min": 5,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "discoveryBroadcastAddress": {
+            "type": "text",
+            "label": "discoveryBroadcastAddress",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "placeholder": "255.255.255.255"
+        },
+        "timeCheckIntervalHours": {
+            "type": "number",
+            "label": "timeCheckIntervalHours",
+            "newLine": true,
+            "min": 24,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "timeSyncThresholdSec": {
+            "type": "number",
+            "label": "timeSyncThresholdSec",
+            "newLine": true,
+            "min": 1,
+            "step": 1,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "configInfo": {
+            "type": "staticText",
+            "newLine": true,
+            "text": "configInfo",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        }
+    }
+}
