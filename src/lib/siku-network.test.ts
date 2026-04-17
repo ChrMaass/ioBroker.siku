@@ -77,7 +77,7 @@ describe('SIKU network helpers', () => {
         });
     });
 
-    it('ignores discovery packets with invalid checksums or unexpected function codes', () => {
+    it('ignores discovery packets with invalid checksums, malformed packets or unexpected function codes', () => {
         const validPacket = Buffer.from(discoveryResponseHex, 'hex');
         const invalidChecksumPacket = Buffer.from(validPacket);
         invalidChecksumPacket[invalidChecksumPacket.length - 1] ^= 0xff;
@@ -97,6 +97,12 @@ describe('SIKU network helpers', () => {
         ).to.equal(null);
         expect(
             parseDiscoveryResponse(nonResponsePacket, {
+                address: '192.168.55.46',
+                port: 4000,
+            }),
+        ).to.equal(null);
+        expect(
+            parseDiscoveryResponse(Buffer.from('FDFD02', 'hex'), {
                 address: '192.168.55.46',
                 port: 4000,
             }),

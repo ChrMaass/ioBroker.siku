@@ -197,7 +197,13 @@ export function parseDiscoveryResponse(
     remoteInfo: Pick<dgram.RemoteInfo, 'address' | 'port'>,
     receivedAt: Date = new Date(),
 ): SikuDiscoveredDevice | null {
-    const parsed = parsePacket(message);
+    let parsed: ParsedSikuPacket;
+    try {
+        parsed = parsePacket(message);
+    } catch {
+        return null;
+    }
+
     if (!parsed.checksumValid || parsed.functionCode !== SikuFunction.Response) {
         return null;
     }

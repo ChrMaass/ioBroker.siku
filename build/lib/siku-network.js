@@ -132,7 +132,12 @@ function isDiscoverySelfEcho(message, remoteInfo, localAddresses, boundPort, dis
 }
 function parseDiscoveryResponse(message, remoteInfo, receivedAt = /* @__PURE__ */ new Date()) {
   var _a;
-  const parsed = (0, import_siku_protocol.parsePacket)(message);
+  let parsed;
+  try {
+    parsed = (0, import_siku_protocol.parsePacket)(message);
+  } catch {
+    return null;
+  }
   if (!parsed.checksumValid || parsed.functionCode !== import_siku_constants.SikuFunction.Response) {
     return null;
   }

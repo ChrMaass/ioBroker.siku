@@ -23,6 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
 var import_siku_constants = require("./lib/siku-constants");
+var import_siku_message_validation = require("./lib/siku-message-validation");
 var import_siku_network = require("./lib/siku-network");
 var import_siku_protocol = require("./lib/siku-protocol");
 class Siku extends utils.Adapter {
@@ -94,10 +95,10 @@ class Siku extends utils.Adapter {
    * @param obj - The original ioBroker message
    */
   async handleDiscoverMessage(obj) {
-    var _a;
-    const payload = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
+    var _a, _b;
+    const payload = (0, import_siku_message_validation.normalizeDiscoverMessagePayload)((_a = obj.message) != null ? _a : {});
     const devices = await (0, import_siku_network.discoverDevices)({
-      broadcastAddress: (_a = payload.broadcastAddress) != null ? _a : this.config.discoveryBroadcastAddress,
+      broadcastAddress: (_b = payload.broadcastAddress) != null ? _b : this.config.discoveryBroadcastAddress,
       password: payload.password,
       timeoutMs: payload.timeoutMs,
       preferredBindPort: payload.preferredBindPort
@@ -111,13 +112,7 @@ class Siku extends utils.Adapter {
    */
   async handleReadDeviceMessage(obj) {
     var _a;
-    if (typeof obj.message !== "object" || obj.message === null) {
-      throw new Error("readDevice requires an object payload");
-    }
-    const payload = obj.message;
-    if (!payload.host || !payload.deviceId || !Array.isArray(payload.parameters)) {
-      throw new Error("readDevice requires host, deviceId and parameters");
-    }
+    const payload = (0, import_siku_message_validation.normalizeReadDeviceMessagePayload)(obj.message);
     const packet = await (0, import_siku_network.readDevicePacket)({
       host: payload.host,
       deviceId: payload.deviceId,

@@ -4,25 +4,10 @@
 
 import * as utils from '@iobroker/adapter-core';
 import { SIKU_DEFAULT_PASSWORD } from './lib/siku-constants';
+import { normalizeDiscoverMessagePayload, normalizeReadDeviceMessagePayload } from './lib/siku-message-validation';
 import { discoverDevices, readDevicePacket } from './lib/siku-network';
 import { toHex } from './lib/siku-protocol';
 import type { ParsedSikuPacket, SikuReadRequestEntry } from './lib/siku-protocol';
-
-interface DiscoverMessagePayload {
-    broadcastAddress?: string;
-    password?: string;
-    timeoutMs?: number;
-    preferredBindPort?: number;
-}
-
-interface ReadDeviceMessagePayload {
-    host: string;
-    deviceId: string;
-    password?: string;
-    port?: number;
-    timeoutMs?: number;
-    parameters: Array<number | SikuReadRequestEntry>;
-}
 
 class Siku extends utils.Adapter {
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -101,9 +86,7 @@ class Siku extends utils.Adapter {
      * @param obj - The original ioBroker message
      */
     private async handleDiscoverMessage(obj: ioBroker.Message): Promise<void> {
-        const payload = (
-            typeof obj.message === 'object' && obj.message !== null ? obj.message : {}
-        ) as DiscoverMessagePayload;
+        const payload = normalizeDiscoverMessagePayload(obj.message ?? {});
         const devices = await discoverDevices({
             broadcastAddress: payload.broadcastAddress ?? this.config.discoveryBroadcastAddress,
             password: payload.password,
@@ -120,14 +103,7 @@ class Siku extends utils.Adapter {
      * @param obj - The original ioBroker message
      */
     private async handleReadDeviceMessage(obj: ioBroker.Message): Promise<void> {
-        if (typeof obj.message !== 'object' || obj.message === null) {
-            throw new Error('readDevice requires an object payload');
-        }
-
-        const payload = obj.message as ReadDeviceMessagePayload;
-        if (!payload.host || !payload.deviceId || !Array.isArray(payload.parameters)) {
-            throw new Error('readDevice requires host, deviceId and parameters');
-        }
+        const payload = normalizeReadDeviceMessagePayload(obj.message);
 
         const packet = await readDevicePacket({
             host: payload.host,
