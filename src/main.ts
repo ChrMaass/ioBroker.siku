@@ -206,6 +206,7 @@ class Siku extends utils.Adapter {
 
                 await this.applyMappedStateUpdates(device, mappedUpdates);
                 await this.applyMappedStateUpdates(device, scheduleUpdates);
+                await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, '', true);
 
                 if (isScheduleStateId(relativeId)) {
                     return;
@@ -214,8 +215,6 @@ class Siku extends utils.Adapter {
                 if (isButtonState(relativeId)) {
                     await this.setStateChangedAsync(fullStateId, false, true);
                 }
-
-                await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, '', true);
             });
 
             this.log.info(`Schreibzugriff erfolgreich: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
