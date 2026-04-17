@@ -56,12 +56,16 @@ function normalizeConfiguredDevice(device, index) {
   if (password.length > 8) {
     throw new Error(`devices[${index}].password must be at most 8 characters long`);
   }
+  const enabled = device.enabled === void 0 ? true : device.enabled;
+  if (typeof enabled !== "boolean") {
+    throw new Error(`devices[${index}].enabled must be a boolean`);
+  }
   return {
     id,
     host,
     name: typeof device.name === "string" && device.name.trim().length > 0 ? device.name.trim() : `L\xFCfter ${id.slice(-4)}`,
     password,
-    enabled: device.enabled !== false,
+    enabled,
     discoveredType,
     lastSeen,
     objectId: `devices.${id}`

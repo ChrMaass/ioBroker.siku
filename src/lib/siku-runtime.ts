@@ -80,6 +80,11 @@ export function normalizeConfiguredDevice(
         throw new Error(`devices[${index}].password must be at most 8 characters long`);
     }
 
+    const enabled = device.enabled === undefined ? true : device.enabled;
+    if (typeof enabled !== 'boolean') {
+        throw new Error(`devices[${index}].enabled must be a boolean`);
+    }
+
     return {
         id,
         host,
@@ -88,7 +93,7 @@ export function normalizeConfiguredDevice(
                 ? device.name.trim()
                 : `Lüfter ${id.slice(-4)}`,
         password,
-        enabled: device.enabled !== false,
+        enabled,
         discoveredType,
         lastSeen,
         objectId: `devices.${id}`,
