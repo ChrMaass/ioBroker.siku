@@ -270,6 +270,37 @@ describe('SIKU network helpers', () => {
         expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x006f, 0x0070]);
     });
 
+    it('rejects write responses that do not echo the requested values', async () => {
+        let thrownError: Error | undefined;
+
+        try {
+            await writeDevicePacket(
+                {
+                    host: '192.168.55.46',
+                    deviceId: '001800354353530B',
+                    password: '1111',
+                    parameters: [{ parameter: 0x006f, value: [3, 4, 5] }],
+                },
+                {
+                    requestOnce: () =>
+                        Promise.resolve(
+                            buildPacket(
+                                Buffer.from('001800354353530B', 'ascii'),
+                                '1111',
+                                SikuFunction.Response,
+                                Buffer.from([0xfe, 0x03, 0x6f, 0x04, 0x04, 0x05]),
+                            ),
+                        ),
+                    delay: () => Promise.resolve(),
+                },
+            );
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(thrownError?.message).to.equal('Write response mismatch for parameter 0x006f from 192.168.55.46');
+    });
+
     it('throws the last network error once all retries are exhausted', async () => {
         const errors = [new Error('timeout #1'), new Error('timeout #2'), new Error('timeout #3')];
         const waitCalls: number[] = [];

@@ -211,6 +211,40 @@ async function executeRequestWithRetries(
     throw lastError ?? new Error(`Unable to communicate with ${host}`);
 }
 
+function normalizeWriteValue(value: SikuWriteRequestEntry['value']): Buffer {
+    if (Buffer.isBuffer(value)) {
+        return Buffer.from(value);
+    }
+    if (value instanceof Uint8Array) {
+        return Buffer.from(value);
+    }
+
+    return Buffer.from(value);
+}
+
+function validateWriteEcho(packet: ParsedSikuPacket, parameters: readonly SikuWriteRequestEntry[], host: string): void {
+    for (const parameter of parameters) {
+        const entry = packet.entries.find(responseEntry => responseEntry.parameter === parameter.parameter);
+        if (!entry) {
+            throw new Error(
+                `Write response from ${host} does not contain parameter 0x${parameter.parameter.toString(16).padStart(4, '0')}`,
+            );
+        }
+        if (entry.unsupported) {
+            throw new Error(
+                `Write response from ${host} marked parameter 0x${parameter.parameter.toString(16).padStart(4, '0')} as unsupported`,
+            );
+        }
+
+        const expectedValue = normalizeWriteValue(parameter.value);
+        if (!entry.value.equals(expectedValue)) {
+            throw new Error(
+                `Write response mismatch for parameter 0x${parameter.parameter.toString(16).padStart(4, '0')} from ${host}`,
+            );
+        }
+    }
+}
+
 /**
  * Returns whether a discovery message is only the local broadcast echo and should be ignored.
  *
@@ -310,7 +344,7 @@ export async function writeDevicePacket(
 ): Promise<ParsedSikuPacket> {
     const payload = buildWritePacket(options.deviceId, options.password, SikuFunction.ReadWrite, options.parameters);
 
-    return executeRequestWithRetries(
+    const packet = await executeRequestWithRetries(
         options.host,
         options.port ?? SIKU_DEFAULT_PORT,
         payload,
@@ -318,6 +352,9 @@ export async function writeDevicePacket(
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
         dependencies,
     );
+
+    validateWriteEcho(packet, options.parameters, options.host);
+    return packet;
 }
 
 export async function discoverDevices(

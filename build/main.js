@@ -360,7 +360,7 @@ class Siku extends utils.Adapter {
           failed: false,
           skipped: true,
           driftSec: null,
-          reason: "disabled",
+          reason: "busy",
           checkedAt: null,
           syncedAt: null
         }))
@@ -423,6 +423,7 @@ class Siku extends utils.Adapter {
       const referenceTime = /* @__PURE__ */ new Date();
       const driftSec = (0, import_siku_time.calculateClockDriftSeconds)(rtcSnapshot.deviceDate, referenceTime);
       await this.setStateChangedAsync(`${prefix}.diagnostics.clockDriftSec`, driftSec, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, "", true);
       this.log.debug(
         `Zeitpr\xFCfung ${device.name} (${device.id}) [${trigger}]: Drift ${driftSec}s gegen\xFCber ${referenceTime.toISOString()}`
       );
@@ -525,11 +526,6 @@ class Siku extends utils.Adapter {
       runtimeDevice.discoveredType = (0, import_siku_discovery_config.formatDiscoveredType)(discoveredDevice);
       runtimeDevice.lastSeen = discoveredDevice.receivedAt;
       await this.applyConfiguredDeviceMetadata(runtimeDevice);
-      await this.setStateChangedAsync(
-        `${runtimeDevice.objectId}.diagnostics.lastDiscovery`,
-        discoveredDevice.receivedAt,
-        true
-      );
       if (discoveredDevice.deviceTypeCode !== null) {
         await this.setStateChangedAsync(
           `${runtimeDevice.objectId}.info.deviceTypeCode`,

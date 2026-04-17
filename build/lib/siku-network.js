@@ -152,6 +152,36 @@ async function executeRequestWithRetries(host, port, payload, timeoutMs, retryDe
   }
   throw lastError != null ? lastError : new Error(`Unable to communicate with ${host}`);
 }
+function normalizeWriteValue(value) {
+  if (Buffer.isBuffer(value)) {
+    return Buffer.from(value);
+  }
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+  return Buffer.from(value);
+}
+function validateWriteEcho(packet, parameters, host) {
+  for (const parameter of parameters) {
+    const entry = packet.entries.find((responseEntry) => responseEntry.parameter === parameter.parameter);
+    if (!entry) {
+      throw new Error(
+        `Write response from ${host} does not contain parameter 0x${parameter.parameter.toString(16).padStart(4, "0")}`
+      );
+    }
+    if (entry.unsupported) {
+      throw new Error(
+        `Write response from ${host} marked parameter 0x${parameter.parameter.toString(16).padStart(4, "0")} as unsupported`
+      );
+    }
+    const expectedValue = normalizeWriteValue(parameter.value);
+    if (!entry.value.equals(expectedValue)) {
+      throw new Error(
+        `Write response mismatch for parameter 0x${parameter.parameter.toString(16).padStart(4, "0")} from ${host}`
+      );
+    }
+  }
+}
 function isDiscoverySelfEcho(message, remoteInfo, localAddresses, boundPort, discoveryPacket) {
   if (message.equals(discoveryPacket)) {
     return true;
@@ -201,7 +231,7 @@ async function readDevicePacket(options, dependencies = {}) {
 async function writeDevicePacket(options, dependencies = {}) {
   var _a, _b, _c;
   const payload = (0, import_siku_protocol.buildWritePacket)(options.deviceId, options.password, import_siku_constants.SikuFunction.ReadWrite, options.parameters);
-  return executeRequestWithRetries(
+  const packet = await executeRequestWithRetries(
     options.host,
     (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT,
     payload,
@@ -209,6 +239,8 @@ async function writeDevicePacket(options, dependencies = {}) {
     (_c = options.retryDelaysMs) != null ? _c : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
     dependencies
   );
+  validateWriteEcho(packet, options.parameters, options.host);
+  return packet;
 }
 async function discoverDevices(options, dependencies = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
