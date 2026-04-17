@@ -23,6 +23,7 @@ __export(siku_runtime_exports, {
   normalizeConfiguredDevice: () => normalizeConfiguredDevice
 });
 module.exports = __toCommonJS(siku_runtime_exports);
+var import_node_net = require("node:net");
 var import_siku_constants = require("./siku-constants");
 var import_siku_protocol = require("./siku-protocol");
 function getPacketEntry(packet, parameter) {
@@ -38,11 +39,17 @@ function normalizeConfiguredDevice(device, index) {
   if (typeof device !== "object" || device === null) {
     throw new Error(`devices[${index}] must be an object`);
   }
-  const id = getTrimmedString(device.id, `devices[${index}].id`);
+  const id = getTrimmedString(device.id, `devices[${index}].id`).toUpperCase();
   if (id.length !== import_siku_constants.SIKU_DEVICE_ID_LENGTH) {
     throw new Error(`devices[${index}].id must be exactly ${import_siku_constants.SIKU_DEVICE_ID_LENGTH} characters long`);
   }
+  if (!/^[0-9A-F]+$/u.test(id)) {
+    throw new Error(`devices[${index}].id must only contain hexadecimal characters`);
+  }
   const host = getTrimmedString(device.host, `devices[${index}].host`);
+  if (!(0, import_node_net.isIPv4)(host)) {
+    throw new Error(`devices[${index}].host must be an IPv4 address`);
+  }
   const discoveredType = typeof device.discoveredType === "string" ? device.discoveredType.trim() : "";
   const lastSeen = typeof device.lastSeen === "string" ? device.lastSeen : "";
   const password = typeof device.password === "string" && device.password.trim().length > 0 ? device.password.trim() : import_siku_constants.SIKU_DEFAULT_PASSWORD;

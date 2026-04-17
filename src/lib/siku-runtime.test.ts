@@ -8,7 +8,7 @@ describe('SIKU runtime helpers', () => {
         expect(
             normalizeConfiguredDevice(
                 {
-                    id: '001800354353530B',
+                    id: '001800354353530b',
                     host: '192.168.55.46',
                     name: '  Gästezimmer  ',
                     password: '',
