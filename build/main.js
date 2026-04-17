@@ -22,15 +22,19 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
+var import_siku_discovery_config = require("./lib/siku-discovery-config");
 var import_siku_constants = require("./lib/siku-constants");
 var import_siku_message_validation = require("./lib/siku-message-validation");
 var import_siku_network = require("./lib/siku-network");
 var import_siku_protocol = require("./lib/siku-protocol");
+var import_siku_time = require("./lib/siku-time");
 var import_siku_runtime = require("./lib/siku-runtime");
 class Siku extends utils.Adapter {
   runtimeDevices = /* @__PURE__ */ new Map();
   pollCycleRunning = false;
+  timeCheckRunning = false;
   pollIntervalHandle;
+  timeCheckIntervalHandle;
   constructor(options = {}) {
     super({
       ...options,
@@ -52,6 +56,7 @@ class Siku extends utils.Adapter {
     await this.initializeRuntimeDevices();
     await this.pollDevices("startup");
     this.startPolling();
+    this.startTimeCheckScheduler();
   }
   /**
    * Is called when adapter shuts down - callback has to be called under any circumstances!
@@ -61,6 +66,7 @@ class Siku extends utils.Adapter {
   onUnload(callback) {
     try {
       this.clearPollingTimer();
+      this.clearTimeCheckTimer();
       callback();
     } catch (error) {
       this.log.error(`Error during unloading: ${error.message}`);
@@ -84,6 +90,12 @@ class Siku extends utils.Adapter {
         case "readDevice":
           await this.handleReadDeviceMessage(obj);
           break;
+        case "syncTimeAll":
+          await this.handleSyncTimeAllMessage(obj);
+          break;
+        case "syncTimeDevice":
+          await this.handleSyncTimeDeviceMessage(obj);
+          break;
         default:
           this.sendMessageResponse(obj, {
             ok: false,
@@ -98,12 +110,13 @@ class Siku extends utils.Adapter {
     }
   }
   /**
-   * Performs a network discovery using UDP broadcast and returns JSON-serializable results.
+   * Performs a network discovery using UDP broadcast, updates matching runtime devices
+   * and returns a merged native config payload for the admin UI.
    *
    * @param obj - The original ioBroker message
    */
   async handleDiscoverMessage(obj) {
-    var _a, _b;
+    var _a, _b, _c;
     const payload = (0, import_siku_message_validation.normalizeDiscoverMessagePayload)((_a = obj.message) != null ? _a : {});
     const devices = await (0, import_siku_network.discoverDevices)({
       broadcastAddress: (_b = payload.broadcastAddress) != null ? _b : this.config.discoveryBroadcastAddress,
@@ -111,7 +124,22 @@ class Siku extends utils.Adapter {
       timeoutMs: payload.timeoutMs,
       preferredBindPort: payload.preferredBindPort
     });
-    this.sendMessageResponse(obj, { ok: true, devices });
+    await this.applyDiscoveryResults(devices);
+    const mergedDevices = (0, import_siku_discovery_config.mergeDiscoveredDevicesIntoConfig)(this.config.devices, devices);
+    const response = {
+      ok: true,
+      devices
+    };
+    if (devices.length === 0) {
+      response.result = "discoveryNoDevices";
+    } else if (JSON.stringify(mergedDevices) !== JSON.stringify((_c = this.config.devices) != null ? _c : [])) {
+      response.result = "discoveryUpdated";
+      response.saveConfig = true;
+      response.native = this.buildNativeConfig(mergedDevices);
+    } else {
+      response.result = "discoveryUnchanged";
+    }
+    this.sendMessageResponse(obj, response);
   }
   /**
    * Sends a read-only UDP request to a specific device.
@@ -130,6 +158,38 @@ class Siku extends utils.Adapter {
       parameters: this.normalizeReadParameters(payload.parameters)
     });
     this.sendMessageResponse(obj, { ok: true, packet: this.serializePacket(packet) });
+  }
+  /**
+   * Executes an on-demand time check for all configured devices.
+   *
+   * @param obj - The original ioBroker message
+   */
+  async handleSyncTimeAllMessage(obj) {
+    const summary = await this.runTimeChecks("manual");
+    this.sendMessageResponse(obj, {
+      ok: true,
+      result: this.getTimeCheckResultCode(summary),
+      summary
+    });
+  }
+  /**
+   * Executes an on-demand time check for exactly one configured device.
+   *
+   * @param obj - The original ioBroker message
+   */
+  async handleSyncTimeDeviceMessage(obj) {
+    var _a;
+    const payload = (0, import_siku_message_validation.normalizeSyncTimeDeviceMessagePayload)((_a = obj.message) != null ? _a : {});
+    const device = this.runtimeDevices.get(payload.deviceId);
+    if (!device) {
+      throw new Error(`Device ${payload.deviceId} is not configured in native.devices`);
+    }
+    const summary = await this.runTimeChecks("manual", [device]);
+    this.sendMessageResponse(obj, {
+      ok: true,
+      result: this.getTimeCheckResultCode(summary),
+      summary
+    });
   }
   /**
    * Creates the runtime registry from the adapter configuration and prepares the ioBroker object tree.
@@ -153,14 +213,14 @@ class Siku extends utils.Adapter {
         }
         this.runtimeDevices.set(runtimeDevice.id, runtimeDevice);
         await this.ensureDeviceObjects(runtimeDevice);
-        await this.applyConfiguredDeviceMetadata(runtimeDevice);
+        await this.applyConfiguredDeviceMetadata(runtimeDevice, { resetConnectionState: true });
       } catch (error) {
         this.log.warn(`Ung\xFCltige Ger\xE4tekonfiguration unter devices[${index}]: ${error.message}`);
       }
     }
     if (this.runtimeDevices.size === 0) {
       this.log.info(
-        "Keine g\xFCltigen L\xFCfter konfiguriert. Discovery und readDevice sind weiterhin \xFCber sendTo nutzbar."
+        "Keine g\xFCltigen L\xFCfter konfiguriert. Discovery, readDevice und syncTime bleiben \xFCber sendTo nutzbar."
       );
     }
   }
@@ -174,7 +234,7 @@ class Siku extends utils.Adapter {
       return;
     }
     const intervalMs = Math.max((_a = this.config.pollIntervalSec) != null ? _a : 30, 5) * 1e3;
-    this.pollIntervalHandle = setInterval(() => {
+    this.pollIntervalHandle = this.setInterval(() => {
       this.pollDevices("interval").catch((error) => {
         this.log.error(`Fehler beim Polling im Intervall: ${error.message}`);
       });
@@ -186,8 +246,35 @@ class Siku extends utils.Adapter {
    */
   clearPollingTimer() {
     if (this.pollIntervalHandle) {
-      clearInterval(this.pollIntervalHandle);
+      this.clearInterval(this.pollIntervalHandle);
       this.pollIntervalHandle = void 0;
+    }
+  }
+  /**
+   * Starts the dedicated periodic RTC check scheduler. The RTC is intentionally not part
+   * of the regular polling cycle to avoid unnecessary reads of the clock parameters.
+   */
+  startTimeCheckScheduler() {
+    var _a;
+    this.clearTimeCheckTimer();
+    if (this.runtimeDevices.size === 0) {
+      return;
+    }
+    const intervalMs = Math.max((_a = this.config.timeCheckIntervalHours) != null ? _a : 24, 1) * 60 * 60 * 1e3;
+    this.timeCheckIntervalHandle = this.setInterval(() => {
+      this.runTimeChecks("interval").catch((error) => {
+        this.log.error(`Fehler bei der Zeitpr\xFCfung im Intervall: ${error.message}`);
+      });
+    }, intervalMs);
+    this.log.debug(`Zeitpr\xFCfung geplant: alle ${intervalMs} ms`);
+  }
+  /**
+   * Stops the recurring time check timer if it is currently active.
+   */
+  clearTimeCheckTimer() {
+    if (this.timeCheckIntervalHandle) {
+      this.clearInterval(this.timeCheckIntervalHandle);
+      this.timeCheckIntervalHandle = void 0;
     }
   }
   /**
@@ -248,11 +335,234 @@ class Siku extends utils.Adapter {
     }
   }
   /**
+   * Executes the dedicated RTC check for one or multiple devices and synchronizes
+   * the device clock only if the absolute drift is above the configured threshold.
+   *
+   * @param trigger - Source of the time check
+   * @param targetDevices - Optional subset of configured devices
+   */
+  async runTimeChecks(trigger, targetDevices = Array.from(this.runtimeDevices.values())) {
+    if (this.timeCheckRunning) {
+      this.log.debug(`Zeitpr\xFCfung (${trigger}) \xFCbersprungen, da bereits ein Zyklus l\xE4uft.`);
+      return {
+        trigger,
+        total: targetDevices.length,
+        checked: 0,
+        synced: 0,
+        failed: 0,
+        skipped: targetDevices.length,
+        skippedBecauseBusy: true,
+        devices: targetDevices.map((device) => ({
+          deviceId: device.id,
+          host: device.host,
+          checked: false,
+          synced: false,
+          failed: false,
+          skipped: true,
+          driftSec: null,
+          reason: "busy",
+          checkedAt: null,
+          syncedAt: null
+        }))
+      };
+    }
+    this.timeCheckRunning = true;
+    const results = [];
+    try {
+      for (const device of targetDevices) {
+        results.push(await this.runTimeCheckForDevice(device, trigger));
+      }
+    } finally {
+      this.timeCheckRunning = false;
+    }
+    return {
+      trigger,
+      total: targetDevices.length,
+      checked: results.filter((result) => result.checked).length,
+      synced: results.filter((result) => result.synced).length,
+      failed: results.filter((result) => result.failed).length,
+      skipped: results.filter((result) => result.skipped).length,
+      skippedBecauseBusy: false,
+      devices: results
+    };
+  }
+  /**
+   * Performs the RTC read/optional write sequence for one device.
+   *
+   * @param device - Runtime device configuration
+   * @param trigger - Source of the time check for logging
+   */
+  async runTimeCheckForDevice(device, trigger) {
+    var _a;
+    const checkedAt = /* @__PURE__ */ new Date();
+    const checkedAtIso = checkedAt.toISOString();
+    const prefix = device.objectId;
+    await this.setStateChangedAsync(`${prefix}.diagnostics.lastTimeCheck`, checkedAtIso, true);
+    if (!device.enabled) {
+      return {
+        deviceId: device.id,
+        host: device.host,
+        checked: false,
+        synced: false,
+        failed: false,
+        skipped: true,
+        driftSec: null,
+        reason: "disabled",
+        checkedAt: checkedAtIso,
+        syncedAt: null
+      };
+    }
+    try {
+      const packet = await (0, import_siku_network.readDevicePacket)({
+        host: device.host,
+        deviceId: device.id,
+        password: device.password,
+        parameters: import_siku_constants.SIKU_TIME_CHECK_PARAMETERS.map((parameter) => ({ parameter }))
+      });
+      const rtcSnapshot = (0, import_siku_time.decodeRtcSnapshot)(packet);
+      const referenceTime = /* @__PURE__ */ new Date();
+      const driftSec = (0, import_siku_time.calculateClockDriftSeconds)(rtcSnapshot.deviceDate, referenceTime);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.clockDriftSec`, driftSec, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, "", true);
+      this.log.debug(
+        `Zeitpr\xFCfung ${device.name} (${device.id}) [${trigger}]: Drift ${driftSec}s gegen\xFCber ${referenceTime.toISOString()}`
+      );
+      if (Math.abs(driftSec) <= Math.max((_a = this.config.timeSyncThresholdSec) != null ? _a : 10, 0)) {
+        return {
+          deviceId: device.id,
+          host: device.host,
+          checked: true,
+          synced: false,
+          failed: false,
+          skipped: false,
+          driftSec,
+          reason: "withinThreshold",
+          checkedAt: checkedAtIso,
+          syncedAt: null
+        };
+      }
+      const syncDate = /* @__PURE__ */ new Date();
+      await (0, import_siku_network.writeDevicePacket)({
+        host: device.host,
+        deviceId: device.id,
+        password: device.password,
+        parameters: [
+          { parameter: import_siku_constants.SIKU_PARAMETER_RTC_TIME, value: (0, import_siku_time.encodeRtcTime)(syncDate) },
+          { parameter: import_siku_constants.SIKU_PARAMETER_RTC_CALENDAR, value: (0, import_siku_time.encodeRtcCalendar)(syncDate) }
+        ]
+      });
+      const syncedAtIso = syncDate.toISOString();
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastTimeSync`, syncedAtIso, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, "", true);
+      this.log.info(
+        `Zeit von ${device.name} (${device.id}) um ${driftSec}s korrigiert (${device.host}, ${syncedAtIso})`
+      );
+      return {
+        deviceId: device.id,
+        host: device.host,
+        checked: true,
+        synced: true,
+        failed: false,
+        skipped: false,
+        driftSec,
+        reason: "synced",
+        checkedAt: checkedAtIso,
+        syncedAt: syncedAtIso
+      };
+    } catch (error) {
+      const message = error.message;
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, `Zeitpr\xFCfung: ${message}`, true);
+      this.log.warn(
+        `Zeitpr\xFCfung fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${message}`
+      );
+      return {
+        deviceId: device.id,
+        host: device.host,
+        checked: false,
+        synced: false,
+        failed: true,
+        skipped: false,
+        driftSec: null,
+        reason: "error",
+        checkedAt: checkedAtIso,
+        syncedAt: null,
+        error: message
+      };
+    }
+  }
+  /**
+   * Returns the stable result code that the JSON config button should display.
+   *
+   * @param summary - Summary of a manual or scheduled time check run
+   */
+  getTimeCheckResultCode(summary) {
+    if (summary.skippedBecauseBusy) {
+      return "timeCheckBusy";
+    }
+    if (summary.total === 0) {
+      return "timeCheckNoDevices";
+    }
+    if (summary.failed > 0) {
+      return "timeCheckCompletedWithErrors";
+    }
+    if (summary.synced > 0) {
+      return "timeCheckSynced";
+    }
+    return "timeCheckNoSyncNeeded";
+  }
+  /**
+   * Applies the discovery results to already configured runtime devices so polling,
+   * state metadata and diagnostics can immediately reflect the identified host/type.
+   *
+   * @param devices - Discovered devices from the latest UDP broadcast search
+   */
+  async applyDiscoveryResults(devices) {
+    for (const discoveredDevice of devices) {
+      const runtimeDevice = this.runtimeDevices.get(discoveredDevice.deviceId);
+      if (!runtimeDevice) {
+        continue;
+      }
+      runtimeDevice.host = discoveredDevice.host;
+      runtimeDevice.discoveredType = (0, import_siku_discovery_config.formatDiscoveredType)(discoveredDevice);
+      runtimeDevice.lastSeen = discoveredDevice.receivedAt;
+      await this.applyConfiguredDeviceMetadata(runtimeDevice);
+      if (discoveredDevice.deviceTypeCode !== null) {
+        await this.setStateChangedAsync(
+          `${runtimeDevice.objectId}.info.deviceTypeCode`,
+          discoveredDevice.deviceTypeCode,
+          true
+        );
+      }
+      if (discoveredDevice.deviceTypeHex !== null) {
+        await this.setStateChangedAsync(
+          `${runtimeDevice.objectId}.info.deviceTypeHex`,
+          discoveredDevice.deviceTypeHex,
+          true
+        );
+      }
+    }
+  }
+  /**
+   * Builds the full native config object that the JSON config sendTo button can reuse.
+   *
+   * @param devices - Updated device list to send back to the admin UI
+   */
+  buildNativeConfig(devices) {
+    return {
+      pollIntervalSec: this.config.pollIntervalSec,
+      discoveryBroadcastAddress: this.config.discoveryBroadcastAddress,
+      timeCheckIntervalHours: this.config.timeCheckIntervalHours,
+      timeSyncThresholdSec: this.config.timeSyncThresholdSec,
+      devices
+    };
+  }
+  /**
    * Writes the static metadata derived from the adapter config into the ioBroker state tree.
    *
    * @param device - Runtime device configuration
+   * @param options - Optional behavior switches for initial setup
    */
-  async applyConfiguredDeviceMetadata(device) {
+  async applyConfiguredDeviceMetadata(device, options = {}) {
     const prefix = device.objectId;
     await this.setStateChangedAsync(`${prefix}.info.host`, device.host, true);
     await this.setStateChangedAsync(`${prefix}.info.name`, device.name, true);
@@ -261,8 +571,11 @@ class Siku extends utils.Adapter {
     await this.setStateChangedAsync(`${prefix}.info.configuredType`, device.discoveredType, true);
     if (device.lastSeen) {
       await this.setStateChangedAsync(`${prefix}.info.lastSeen`, device.lastSeen, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastDiscovery`, device.lastSeen, true);
     }
-    await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
+    if (options.resetConnectionState) {
+      await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
+    }
   }
   /**
    * Applies a successful poll snapshot to the ioBroker states of one device.
@@ -491,6 +804,51 @@ class Siku extends utils.Adapter {
           read: true,
           write: false,
           def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.lastDiscovery`,
+        common: {
+          name: "Letzte Discovery",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.lastTimeCheck`,
+        common: {
+          name: "Letzte Zeitpr\xFCfung",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.lastTimeSync`,
+        common: {
+          name: "Letzter Zeitsync",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.clockDriftSec`,
+        common: {
+          name: "Uhrzeitabweichung",
+          role: "value.interval",
+          unit: "s",
+          type: "number",
+          read: true,
+          write: false,
+          def: 0
         }
       },
       {

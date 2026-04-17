@@ -15,12 +15,13 @@ import {
 import {
     buildDiscoveryPacket,
     buildReadPacket,
+    buildWritePacket,
     decodeAscii,
     decodeUnsignedLE,
     parsePacket,
     toHex,
 } from './siku-protocol';
-import type { ParsedSikuPacket, SikuReadRequestEntry } from './siku-protocol';
+import type { ParsedSikuPacket, SikuReadRequestEntry, SikuWriteRequestEntry } from './siku-protocol';
 
 export interface SikuDiscoveredDevice {
     host: string;
@@ -44,6 +45,16 @@ export interface SikuReadDeviceOptions {
     deviceId: string;
     password: string;
     parameters: SikuReadRequestEntry[];
+    port?: number;
+    timeoutMs?: number;
+    retryDelaysMs?: readonly number[];
+}
+
+export interface SikuWriteDeviceOptions {
+    host: string;
+    deviceId: string;
+    password: string;
+    parameters: SikuWriteRequestEntry[];
     port?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
@@ -162,6 +173,78 @@ async function requestOnce(host: string, port: number, payload: Buffer, timeoutM
     });
 }
 
+async function executeRequestWithRetries(
+    host: string,
+    port: number,
+    payload: Buffer,
+    timeoutMs: number,
+    retryDelaysMs: readonly number[],
+    dependencies: SikuNetworkDependencies,
+): Promise<ParsedSikuPacket> {
+    const request = dependencies.requestOnce ?? requestOnce;
+    const wait = dependencies.delay ?? delay;
+    let lastError: Error | undefined;
+
+    for (const retryDelay of retryDelaysMs) {
+        try {
+            if (retryDelay > 0) {
+                await wait(retryDelay);
+            }
+
+            const response = await request(host, port, payload, timeoutMs);
+            const parsed = parsePacket(response);
+            if (!parsed.checksumValid) {
+                throw new Error(`Invalid checksum in response from ${host}`);
+            }
+            if (parsed.functionCode !== SikuFunction.Response) {
+                throw new Error(
+                    `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, '0')} in response from ${host}`,
+                );
+            }
+
+            return parsed;
+        } catch (error) {
+            lastError = error as Error;
+        }
+    }
+
+    throw lastError ?? new Error(`Unable to communicate with ${host}`);
+}
+
+function normalizeWriteValue(value: SikuWriteRequestEntry['value']): Buffer {
+    if (Buffer.isBuffer(value)) {
+        return Buffer.from(value);
+    }
+    if (value instanceof Uint8Array) {
+        return Buffer.from(value);
+    }
+
+    return Buffer.from(value);
+}
+
+function validateWriteEcho(packet: ParsedSikuPacket, parameters: readonly SikuWriteRequestEntry[], host: string): void {
+    for (const parameter of parameters) {
+        const entry = packet.entries.find(responseEntry => responseEntry.parameter === parameter.parameter);
+        if (!entry) {
+            throw new Error(
+                `Write response from ${host} does not contain parameter 0x${parameter.parameter.toString(16).padStart(4, '0')}`,
+            );
+        }
+        if (entry.unsupported) {
+            throw new Error(
+                `Write response from ${host} marked parameter 0x${parameter.parameter.toString(16).padStart(4, '0')} as unsupported`,
+            );
+        }
+
+        const expectedValue = normalizeWriteValue(parameter.value);
+        if (!entry.value.equals(expectedValue)) {
+            throw new Error(
+                `Write response mismatch for parameter 0x${parameter.parameter.toString(16).padStart(4, '0')} from ${host}`,
+            );
+        }
+    }
+}
+
 /**
  * Returns whether a discovery message is only the local broadcast echo and should be ignored.
  *
@@ -227,43 +310,51 @@ export function parseDiscoveryResponse(
     };
 }
 
+/**
+ * Reads one or more parameters from a specific device.
+ *
+ * @param options - Request target and parameter definition
+ * @param dependencies - Optional injected network dependencies for tests
+ */
 export async function readDevicePacket(
     options: SikuReadDeviceOptions,
     dependencies: SikuNetworkDependencies = {},
 ): Promise<ParsedSikuPacket> {
     const payload = buildReadPacket(options.deviceId, options.password, options.parameters);
-    const retryDelays = options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS;
-    const request = dependencies.requestOnce ?? requestOnce;
-    const wait = dependencies.delay ?? delay;
-    let lastError: Error | undefined;
 
-    for (const retryDelay of retryDelays) {
-        try {
-            if (retryDelay > 0) {
-                await wait(retryDelay);
-            }
-            const response = await request(
-                options.host,
-                options.port ?? SIKU_DEFAULT_PORT,
-                payload,
-                options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
-            );
-            const parsed = parsePacket(response);
-            if (!parsed.checksumValid) {
-                throw new Error(`Invalid checksum in response from ${options.host}`);
-            }
-            if (parsed.functionCode !== SikuFunction.Response) {
-                throw new Error(
-                    `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, '0')} in response from ${options.host}`,
-                );
-            }
-            return parsed;
-        } catch (error) {
-            lastError = error as Error;
-        }
-    }
+    return executeRequestWithRetries(
+        options.host,
+        options.port ?? SIKU_DEFAULT_PORT,
+        payload,
+        options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
+        options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
+        dependencies,
+    );
+}
 
-    throw lastError ?? new Error(`Unable to read from ${options.host}`);
+/**
+ * Writes one or more parameters using function 0x03 and validates the echoed response.
+ *
+ * @param options - Request target and parameter/value definition
+ * @param dependencies - Optional injected network dependencies for tests
+ */
+export async function writeDevicePacket(
+    options: SikuWriteDeviceOptions,
+    dependencies: SikuNetworkDependencies = {},
+): Promise<ParsedSikuPacket> {
+    const payload = buildWritePacket(options.deviceId, options.password, SikuFunction.ReadWrite, options.parameters);
+
+    const packet = await executeRequestWithRetries(
+        options.host,
+        options.port ?? SIKU_DEFAULT_PORT,
+        payload,
+        options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
+        options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
+        dependencies,
+    );
+
+    validateWriteEcho(packet, options.parameters, options.host);
+    return packet;
 }
 
 export async function discoverDevices(
