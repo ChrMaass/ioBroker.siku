@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.create-adapter.json
+BDA_Anschluss_SmartHome_RV_V2.pdf
