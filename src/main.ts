@@ -39,7 +39,7 @@ interface TimeCheckDeviceResult {
     failed: boolean;
     skipped: boolean;
     driftSec: number | null;
-    reason: 'synced' | 'withinThreshold' | 'disabled' | 'error';
+    reason: 'synced' | 'withinThreshold' | 'disabled' | 'busy' | 'error';
     checkedAt: string | null;
     syncedAt: string | null;
     error?: string;
@@ -434,7 +434,7 @@ class Siku extends utils.Adapter {
                     failed: false,
                     skipped: true,
                     driftSec: null,
-                    reason: 'disabled',
+                    reason: 'busy',
                     checkedAt: null,
                     syncedAt: null,
                 })),
@@ -507,6 +507,7 @@ class Siku extends utils.Adapter {
             const driftSec = calculateClockDriftSeconds(rtcSnapshot.deviceDate, referenceTime);
 
             await this.setStateChangedAsync(`${prefix}.diagnostics.clockDriftSec`, driftSec, true);
+            await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, '', true);
             this.log.debug(
                 `Zeitprüfung ${device.name} (${device.id}) [${trigger}]: Drift ${driftSec}s gegenüber ${referenceTime.toISOString()}`,
             );
@@ -619,11 +620,6 @@ class Siku extends utils.Adapter {
             runtimeDevice.lastSeen = discoveredDevice.receivedAt;
 
             await this.applyConfiguredDeviceMetadata(runtimeDevice);
-            await this.setStateChangedAsync(
-                `${runtimeDevice.objectId}.diagnostics.lastDiscovery`,
-                discoveredDevice.receivedAt,
-                true,
-            );
             if (discoveredDevice.deviceTypeCode !== null) {
                 await this.setStateChangedAsync(
                     `${runtimeDevice.objectId}.info.deviceTypeCode`,
