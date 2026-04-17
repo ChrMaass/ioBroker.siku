@@ -175,7 +175,9 @@ class Siku extends utils.Adapter {
     }
     const intervalMs = Math.max((_a = this.config.pollIntervalSec) != null ? _a : 30, 5) * 1e3;
     this.pollIntervalHandle = setInterval(() => {
-      void this.pollDevices("interval");
+      this.pollDevices("interval").catch((error) => {
+        this.log.error(`Fehler beim Polling im Intervall: ${error.message}`);
+      });
     }, intervalMs);
     this.log.debug(`Polling gestartet: alle ${intervalMs} ms`);
   }
