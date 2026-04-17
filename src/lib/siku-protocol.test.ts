@@ -7,8 +7,8 @@ import {
     decodeUnsignedLE,
     parsePacket,
     toHex,
-} from './lib/siku-protocol';
-import { SikuFunction } from './lib/siku-constants';
+} from './siku-protocol';
+import { SikuFunction } from './siku-constants';
 
 describe('SIKU protocol helpers', () => {
     it('builds the broadcast discovery packet from the validated live sample', () => {
@@ -27,6 +27,12 @@ describe('SIKU protocol helpers', () => {
         const payload = buildReadPayload([{ parameter: 0x0077, requestValue: [0x01, 0x01] }]);
 
         expect(toHex(payload)).to.equal('FE02770101');
+    });
+
+    it('rejects invalid byte arrays before they are normalized into buffers', () => {
+        expect(() => buildReadPayload([{ parameter: 0x0077, requestValue: [0x01, 0x100] }])).to.throw(
+            'Invalid byte value 256',
+        );
     });
 
     it('parses the PDF response example with two single-byte values', () => {
@@ -58,6 +64,20 @@ describe('SIKU protocol helpers', () => {
         expect(parsed.entries[1].value[0]).to.equal(0x05);
         expect(parsed.entries[2].parameter).to.equal(0x0240);
         expect(toHex(parsed.entries[2].value)).to.equal('5168');
+    });
+
+    it('rejects malformed marker payloads before they can consume checksum bytes', () => {
+        const malformedPacket = buildPacket(Buffer.alloc(16), '1111', SikuFunction.Response, Buffer.from([0xfd]));
+
+        expect(() => parsePacket(malformedPacket)).to.throw(
+            'Packet ended while parsing an unsupported-parameter marker',
+        );
+    });
+
+    it('rejects truncated device identifiers in incoming packets', () => {
+        const packet = Buffer.from('FDFD020F303031383030333534333533353330420431313131067CB9D006', 'hex');
+
+        expect(() => parsePacket(packet)).to.throw('Invalid device ID length: 15');
     });
 
     it('parses a captured discovery response from the live network correctly', () => {
