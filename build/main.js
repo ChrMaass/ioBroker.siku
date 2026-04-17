@@ -144,13 +144,13 @@ class Siku extends utils.Adapter {
         const scheduleUpdates = (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket);
         await this.applyMappedStateUpdates(device, mappedUpdates);
         await this.applyMappedStateUpdates(device, scheduleUpdates);
+        await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, "", true);
         if ((0, import_siku_schedule.isScheduleStateId)(relativeId)) {
           return;
         }
         if ((0, import_siku_state_mapping.isButtonState)(relativeId)) {
           await this.setStateChangedAsync(fullStateId, false, true);
         }
-        await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, "", true);
       });
       this.log.info(`Schreibzugriff erfolgreich: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
     } catch (error) {

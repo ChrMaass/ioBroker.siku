@@ -1,4 +1,5 @@
 ![Logo](admin/siku.png)
+
 # ioBroker.siku
 
 [![NPM version](https://img.shields.io/npm/v/iobroker.siku.svg)](https://www.npmjs.com/package/iobroker.siku)
@@ -14,46 +15,80 @@
 
 Dieser Adapter integriert Lüftungsgeräte der Serie **SIKU RV V2** in ioBroker.
 
-Der Entwicklungsstand in diesem Repository ist aktuell auf eine frühe Beta ausgerichtet. Der Schwerpunkt liegt auf:
+Der Entwicklungsstand in diesem Repository ist aktuell auf eine **Beta-Version** ausgerichtet.
+
+## Aktueller Funktionsumfang
 
 - Kommunikation per UDP gemäß Herstellerprotokoll
 - Multi-Device-Betrieb in **einer** Adapter-Instanz
 - Broadcast-Discovery im lokalen Netzwerk
-- geplanter RTC-Prüfung und Zeitsynchronisation
+- Admin-Konfiguration für mehrere Geräte
+- separater RTC-Zeitcheck standardmäßig alle 24 Stunden (konfigurierbar)
+- Zeitsynchronisation nur bei Drift über einer konfigurierbaren Schwelle
+- State-basierte Steuerung zentraler Betriebsparameter
+- vollständige Abbildung des Wochenzeitplans über ioBroker-States
 
-## Geplante Kernfunktionen
+## Unterstützte Kernfunktionen
 
-- Erkennung von Master-Geräten per Broadcast
+- Erkennung von Master-Geräten per Broadcast (`0x007C`, `0x00B9`)
 - Verwaltung mehrerer Geräte über stabile Geräte-IDs
-- Status- und Diagnosewerte für Lüftung, Filter, Alarme und Sensoren
-- Steuerung zentraler Betriebsmodi und Zeitpläne
-- manuelle sowie automatische Zeitsynchronisation mit Drift-Schwelle
+- Polling von Status-, Sensor- und Diagnosewerten
+- Schreiben zentraler Parameter über States, z. B.:
+    - Ein/Aus
+    - Lüfterstufe
+    - manuelle Lüfterstufe
+    - Betriebsart
+    - Nacht-/Party-Timer
+    - Feuchte-Sollwert
+    - Sensor-Aktivierungen
+- Wochenzeitplan mit Struktur:
+    - `schedule.monday.p1.speed`
+    - `schedule.monday.p1.endHour`
+    - `schedule.monday.p1.endMinute`
+    - … bis `schedule.sunday.p4.*`
+- Diagnosewerte wie:
+    - Filter-Countdown
+    - Betriebsstunden
+    - Alarmstufe
+    - Filterwechselanzeige
+    - letzte Discovery / letzter Poll / letzte Zeitprüfung
 
 ## Entwicklung
 
 Wichtige Skripte:
 
-| Skript | Zweck |
-| --- | --- |
-| `npm run build` | TypeScript kompilieren |
-| `npm run check` | Type-Check ohne Build |
-| `npm run lint` | Linting ausführen |
-| `npm run test` | Unit-/Pakettests ausführen |
-| `npm run coverage` | Test-Coverage ermitteln |
+| Skript               | Zweck                                      |
+| -------------------- | ------------------------------------------ |
+| `npm run build`      | TypeScript kompilieren                     |
+| `npm run check`      | Type-Check ohne Build                      |
+| `npm run lint`       | Linting ausführen                          |
+| `npm run test`       | Unit-/Pakettests ausführen                 |
+| `npm run coverage`   | Test-Coverage ermitteln                    |
 | `npm run dev-server` | Lokale ioBroker-Entwicklung mit dev-server |
 
 Der Adapter wird mit dem offiziellen ioBroker-Tooling erzeugt und mit TypeScript entwickelt.
 
+## Hinweise zum Beta-Status
+
+- Discovery, Polling, Zeitcheck und Schedule-Reads wurden bereits gegen mehrere reale Geräte validiert.
+- Schreibende Live-Tests wurden bewusst nur sehr zurückhaltend durchgeführt.
+- Netzwerk-/Servicefunktionen wie WLAN-Rekonfiguration, Passwortänderung oder Reset sind aktuell **nicht** als normale States vorgesehen.
+
 ## Changelog
+
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
 
 ### **WORK IN PROGRESS**
-* (Christian Maaß) initial release
+
+- (Christian Maaß) Broadcast-Discovery, Multi-Device-Runtime und separaten RTC-Zeitcheck ergänzt
+- (Christian Maaß) zentrale State-Mappings für sichere Betriebsparameter ergänzt
+- (Christian Maaß) vollständige Zeitplan-Abbildung für 7 Tage x 4 Perioden ergänzt
 
 ## License
+
 MIT License
 
 Copyright (c) 2026 Christian Maaß <christian@maass.it>
