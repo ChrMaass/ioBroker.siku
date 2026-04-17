@@ -18,9 +18,9 @@ export interface DiscoverMessagePayload {
  * Normalized payload for reading a specific device via the messagebox API.
  */
 export interface ReadDeviceMessagePayload {
-    /** Target host name or IP address of the device. */
+    /** Target IPv4 address of the device. */
     host: string;
-    /** Uppercase hexadecimal SIKU device identifier. */
+    /** SIKU device identifier string for the target device. */
     deviceId: string;
     /** Optional device password. */
     password?: string;

@@ -92,4 +92,15 @@ jobs:
 
       - name: Push release commit and tag
         if: steps.preflight.outputs.should_release == 'true'
-        run: git push origin HEAD:main --follow-tags
+        shell: bash
+        run: |
+          git fetch origin main --tags
+          current_main="$(git rev-parse origin/main)"
+          tested_sha="${{ github.event.workflow_run.head_sha }}"
+
+          if [ "$current_main" != "$tested_sha" ]; then
+            echo "main moved on to $current_main; skipping stale auto-release for $tested_sha"
+            exit 0
+          fi
+
+          git push origin HEAD:main --follow-tags
