@@ -37,6 +37,43 @@ describe('SIKU runtime helpers', () => {
         expect(() =>
             normalizeConfiguredDevice(
                 {
+                    id: '00180035.353530B',
+                    host: '192.168.55.46',
+                },
+                0,
+            ),
+        ).to.throw('devices[0].id must only contain hexadecimal characters');
+        expect(() =>
+            normalizeConfiguredDevice(
+                {
+                    id: '00180035435353GB',
+                    host: '192.168.55.46',
+                },
+                0,
+            ),
+        ).to.throw('devices[0].id must only contain hexadecimal characters');
+        expect(() =>
+            normalizeConfiguredDevice(
+                {
+                    id: '001800354353530B',
+                    host: 'fan.local',
+                },
+                0,
+            ),
+        ).to.throw('devices[0].host must be an IPv4 address');
+        expect(() =>
+            normalizeConfiguredDevice(
+                {
+                    id: '001800354353530B',
+                    host: '192.168.55.46',
+                    enabled: 'false' as unknown as boolean,
+                },
+                0,
+            ),
+        ).to.throw('devices[0].enabled must be a boolean');
+        expect(() =>
+            normalizeConfiguredDevice(
+                {
                     id: '001800354353530B',
                     host: '192.168.55.46',
                     password: '123456789',
