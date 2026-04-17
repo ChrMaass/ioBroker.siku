@@ -4,8 +4,8 @@
         "version": "0.0.1",
         "news": {
             "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
+                "en": "Beta with discovery, multi-device runtime, time checks and schedule support",
+                "de": "Beta mit Discovery, Multi-Device-Runtime, Zeitprüfung und Zeitplan-Unterstützung",
                 "ru": "Начальная версия",
                 "pt": "lançamento inicial",
                 "nl": "Eerste uitgave",
@@ -32,7 +32,7 @@
         },
         "desc": {
             "en": "ioBroker adapter for SIKU RV V2 ventilation devices",
-            "de": "ioBroker-Adapter für SIKU RV V2 Beatmungsgeräte",
+            "de": "ioBroker-Adapter für SIKU RV V2 Lüftungsgeräte",
             "ru": "Адаптер ioBroker для аппаратов вентиляции SIKU RV V2",
             "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2",
             "nl": "ioBroker-adapter voor SIKU RV V2-ventilatieapparaten",
@@ -43,16 +43,8 @@
             "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2",
             "zh-cn": "用于 SIKU RV V2 通风设备的 ioBroker 适配器"
         },
-        "authors": [
-            "Christian Maaß <christian@maass.it>"
-        ],
-        "keywords": [
-            "siku",
-            "ventilation",
-            "fan",
-            "udp",
-            "rv v2"
-        ],
+        "authors": ["Christian Maaß <christian@maass.it>"],
+        "keywords": ["siku", "ventilation", "fan", "udp", "rv v2"],
         "licenseInformation": {
             "type": "free",
             "license": "MIT"
