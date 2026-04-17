@@ -220,11 +220,11 @@ class Siku extends utils.Adapter {
     const pollStartedAtIso = pollStartedAt.toISOString();
     const pollStartedMs = Date.now();
     const prefix = device.objectId;
-    await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
     if (!device.enabled) {
       await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
       return false;
     }
+    await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
     try {
       const packet = await (0, import_siku_network.readDevicePacket)({
         host: device.host,
