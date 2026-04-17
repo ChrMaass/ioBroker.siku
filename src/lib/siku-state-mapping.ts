@@ -27,6 +27,7 @@ import {
     SIKU_PARAMETER_RESET_FILTER_TIMER,
     SIKU_PARAMETER_RTC_BATTERY_VOLTAGE,
     SIKU_PARAMETER_TIME_CONTROLLED_OPERATION,
+    SIKU_PARAMETER_TIMER_COUNTDOWN,
     SIKU_PARAMETER_TIMER_MODE,
     SIKU_PARAMETER_NIGHT_TIMER_SETPOINT,
 } from './siku-constants';
@@ -93,6 +94,24 @@ function decodeCountdownText(value: Buffer): string {
     const minutes = remainingAfterDays % 60;
 
     return `${days}d ${hours}h ${minutes}m`;
+}
+
+function decodeTimerOperationCountdownSeconds(value: Buffer): number {
+    if (value.length !== 3) {
+        throw new Error(`Timer operation countdown must be 3 bytes long, received ${value.length}`);
+    }
+
+    return value[0] + value[1] * 60 + value[2] * 60 * 60;
+}
+
+function decodeTimerOperationCountdownText(value: Buffer): string {
+    const totalSeconds = decodeTimerOperationCountdownSeconds(value);
+    const hours = Math.floor(totalSeconds / 3600);
+    const remainingAfterHours = totalSeconds % 3600;
+    const minutes = Math.floor(remainingAfterHours / 60);
+    const seconds = remainingAfterHours % 60;
+
+    return `${hours}h ${minutes}m ${seconds}s`;
 }
 
 function decodeOperatingHoursMinutes(value: Buffer): number {
@@ -182,6 +201,10 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
         common: { name: 'Timer-Modus', role: 'level.mode', type: 'number', read: true, write: true, def: 0 },
         read: { parameter: SIKU_PARAMETER_TIMER_MODE, decode: decodeUnsignedLE },
         write: { parameter: SIKU_PARAMETER_TIMER_MODE, encode: value => encodeIntegerRange(value, 0, 2, 'Timer mode') },
+    },
+    {
+        relativeId: 'control.timerModeText',
+        common: { name: 'Timer-Modus (Text)', role: 'text', type: 'string', read: true, write: false, def: '' },
     },
     {
         relativeId: 'control.humiditySensorEnabled',
@@ -394,6 +417,10 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
         write: { parameter: SIKU_PARAMETER_FAN_MODE, encode: value => encodeIntegerRange(value, 0, 2, 'Fan mode') },
     },
     {
+        relativeId: 'control.fanModeText',
+        common: { name: 'Betriebsart (Text)', role: 'text', type: 'string', read: true, write: false, def: '' },
+    },
+    {
         relativeId: 'control.analogSensorSetpoint',
         common: {
             name: '0-10V-Sollwert',
@@ -425,6 +452,31 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
         },
         read: { parameter: SIKU_PARAMETER_NIGHT_TIMER_SETPOINT, decode: decodeTimerDurationMinutes },
         write: { parameter: SIKU_PARAMETER_NIGHT_TIMER_SETPOINT, encode: encodeTimerDurationMinutes },
+    },
+    {
+        relativeId: 'timers.timerCountdownSeconds',
+        common: {
+            name: 'Verbleibende Timerdauer',
+            role: 'value.interval',
+            type: 'number',
+            unit: 's',
+            read: true,
+            write: false,
+            def: 0,
+        },
+        read: { parameter: SIKU_PARAMETER_TIMER_COUNTDOWN, decode: decodeTimerOperationCountdownSeconds },
+    },
+    {
+        relativeId: 'timers.timerCountdownText',
+        common: {
+            name: 'Verbleibende Timerdauer (Text)',
+            role: 'text',
+            type: 'string',
+            read: true,
+            write: false,
+            def: '',
+        },
+        read: { parameter: SIKU_PARAMETER_TIMER_COUNTDOWN, decode: decodeTimerOperationCountdownText },
     },
     {
         relativeId: 'timers.partyModeSetpointMinutes',

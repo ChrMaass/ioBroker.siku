@@ -17,6 +17,7 @@ import {
     normalizeSyncTimeDeviceMessagePayload,
 } from './lib/siku-message-validation';
 import { discoverDevices, readDevicePacket, writeDevicePacket } from './lib/siku-network';
+import { formatLocalTimestamp, getLocalizedEnumStates, getLocalizedModeLabel } from './lib/siku-display';
 import {
     buildScheduleReadRequests,
     buildScheduleWriteRequest,
@@ -475,7 +476,7 @@ class Siku extends utils.Adapter {
             return false;
         }
 
-        await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
+        await this.setTimestampStatePair(`${prefix}.info.lastPoll`, pollStartedAtIso);
 
         try {
             const { basePacket, schedulePacket, scheduleReadError } = await this.enqueueDeviceOperation(
@@ -621,7 +622,7 @@ class Siku extends utils.Adapter {
         const checkedAtIso = checkedAt.toISOString();
         const prefix = device.objectId;
 
-        await this.setStateChangedAsync(`${prefix}.diagnostics.lastTimeCheck`, checkedAtIso, true);
+        await this.setTimestampStatePair(`${prefix}.diagnostics.lastTimeCheck`, checkedAtIso);
 
         if (!device.enabled) {
             return {
@@ -690,7 +691,7 @@ class Siku extends utils.Adapter {
             );
             const syncedAtIso = syncDate.toISOString();
 
-            await this.setStateChangedAsync(`${prefix}.diagnostics.lastTimeSync`, syncedAtIso, true);
+            await this.setTimestampStatePair(`${prefix}.diagnostics.lastTimeSync`, syncedAtIso);
             this.log.info(
                 `Zeit von ${device.name} (${device.id}) um ${driftSec}s korrigiert (${device.host}, ${syncedAtIso})`,
             );
@@ -803,6 +804,44 @@ class Siku extends utils.Adapter {
     }
 
     /**
+     * Writes one ISO timestamp state plus a localized companion state that uses the host's
+     * active locale/timezone formatting for easier reading in Admin and VIS.
+     *
+     * @param stateId - Base state id that stores the ISO/UTC timestamp
+     * @param value - ISO timestamp value
+     */
+    private async setTimestampStatePair(stateId: string, value: string): Promise<void> {
+        await this.setStateChangedAsync(stateId, value, true);
+        await this.setStateChangedAsync(
+            `${stateId}Local`,
+            value ? formatLocalTimestamp(value, this.language) : '',
+            true,
+        );
+    }
+
+    /**
+     * Adds localized enum labels to selected object definitions so writable numeric states are
+     * shown as dropdowns with translated labels in the current ioBroker language.
+     *
+     * @param relativeId - Device-local relative state id
+     * @param common - Base ioBroker common definition
+     */
+    private getLocalizedStateCommon(
+        relativeId: string,
+        common: Partial<ioBroker.StateCommon>,
+    ): Partial<ioBroker.StateCommon> {
+        const enumStates = getLocalizedEnumStates(relativeId, this.language);
+        if (!enumStates) {
+            return common;
+        }
+
+        return {
+            ...common,
+            states: enumStates,
+        };
+    }
+
+    /**
      * Writes the static metadata derived from the adapter config into the ioBroker state tree.
      *
      * @param device - Runtime device configuration
@@ -820,8 +859,8 @@ class Siku extends utils.Adapter {
         await this.setStateChangedAsync(`${prefix}.info.enabled`, device.enabled, true);
         await this.setStateChangedAsync(`${prefix}.info.configuredType`, device.discoveredType, true);
         if (device.lastSeen) {
-            await this.setStateChangedAsync(`${prefix}.info.lastSeen`, device.lastSeen, true);
-            await this.setStateChangedAsync(`${prefix}.diagnostics.lastDiscovery`, device.lastSeen, true);
+            await this.setTimestampStatePair(`${prefix}.info.lastSeen`, device.lastSeen);
+            await this.setTimestampStatePair(`${prefix}.diagnostics.lastDiscovery`, device.lastSeen);
         }
         if (options.resetConnectionState) {
             await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
@@ -845,8 +884,8 @@ class Siku extends utils.Adapter {
         const prefix = device.objectId;
 
         await this.setStateChangedAsync(`${prefix}.info.connection`, true, true);
-        await this.setStateChangedAsync(`${prefix}.info.lastSeen`, snapshot.lastSeen, true);
-        await this.setStateChangedAsync(`${prefix}.diagnostics.lastSuccessfulPoll`, pollStartedAtIso, true);
+        await this.setTimestampStatePair(`${prefix}.info.lastSeen`, snapshot.lastSeen);
+        await this.setTimestampStatePair(`${prefix}.diagnostics.lastSuccessfulPoll`, pollStartedAtIso);
         await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, '', true);
         await this.setStateChangedAsync(`${prefix}.diagnostics.pollDurationMs`, durationMs, true);
         await this.setStateChangedAsync(`${prefix}.diagnostics.reportedDeviceId`, snapshot.reportedDeviceId, true);
@@ -873,7 +912,30 @@ class Siku extends utils.Adapter {
         updates: Array<{ relativeId: string; value: ioBroker.StateValue }>,
     ): Promise<void> {
         for (const update of updates) {
-            await this.setStateChangedAsync(`${device.objectId}.${update.relativeId}`, update.value, true);
+            const fullStateId = `${device.objectId}.${update.relativeId}`;
+            const previousState =
+                update.relativeId === 'control.timerMode' ? await this.getStateAsync(fullStateId) : undefined;
+            const previousTimerModeTimestamp =
+                update.relativeId === 'control.timerMode'
+                    ? await this.getStateAsync(`${device.objectId}.timers.timerModeChangedAt`)
+                    : undefined;
+
+            await this.setStateChangedAsync(fullStateId, update.value, true);
+
+            const localizedModeLabel = getLocalizedModeLabel(update.relativeId, update.value, this.language);
+            if (localizedModeLabel !== undefined) {
+                await this.setStateChangedAsync(`${fullStateId}Text`, localizedModeLabel, true);
+            }
+
+            if (
+                update.relativeId === 'control.timerMode' &&
+                (previousState?.val !== update.value || !previousTimerModeTimestamp?.val)
+            ) {
+                await this.setTimestampStatePair(
+                    `${device.objectId}.timers.timerModeChangedAt`,
+                    new Date().toISOString(),
+                );
+            }
         }
     }
 
@@ -1023,7 +1085,18 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.info.lastSeen`,
                 common: {
-                    name: 'Zuletzt gesehen',
+                    name: 'Zuletzt gesehen (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.info.lastSeenLocal`,
+                common: {
+                    name: 'Zuletzt gesehen (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1034,7 +1107,18 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.info.lastPoll`,
                 common: {
-                    name: 'Letzter Poll-Versuch',
+                    name: 'Letzter Poll-Versuch (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.info.lastPollLocal`,
+                common: {
+                    name: 'Letzter Poll-Versuch (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1067,7 +1151,18 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.diagnostics.lastSuccessfulPoll`,
                 common: {
-                    name: 'Letzter erfolgreicher Poll',
+                    name: 'Letzter erfolgreicher Poll (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.diagnostics.lastSuccessfulPollLocal`,
+                common: {
+                    name: 'Letzter erfolgreicher Poll (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1078,7 +1173,18 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.diagnostics.lastDiscovery`,
                 common: {
-                    name: 'Letzte Discovery',
+                    name: 'Letzte Discovery (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.diagnostics.lastDiscoveryLocal`,
+                common: {
+                    name: 'Letzte Discovery (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1089,7 +1195,18 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.diagnostics.lastTimeCheck`,
                 common: {
-                    name: 'Letzte Zeitprüfung',
+                    name: 'Letzte Zeitprüfung (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.diagnostics.lastTimeCheckLocal`,
+                common: {
+                    name: 'Letzte Zeitprüfung (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1100,7 +1217,40 @@ class Siku extends utils.Adapter {
             {
                 id: `${prefix}.diagnostics.lastTimeSync`,
                 common: {
-                    name: 'Letzter Zeitsync',
+                    name: 'Letzter Zeitsync (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.diagnostics.lastTimeSyncLocal`,
+                common: {
+                    name: 'Letzter Zeitsync (lokal)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.timers.timerModeChangedAt`,
+                common: {
+                    name: 'Letzter Wechsel Timer-Modus (UTC)',
+                    role: 'text',
+                    type: 'string',
+                    read: true,
+                    write: false,
+                    def: '',
+                },
+            },
+            {
+                id: `${prefix}.timers.timerModeChangedAtLocal`,
+                common: {
+                    name: 'Letzter Wechsel Timer-Modus (lokal)',
                     role: 'text',
                     type: 'string',
                     read: true,
@@ -1149,7 +1299,7 @@ class Siku extends utils.Adapter {
             for (const definition of getStateDefinitionsByChannel(channelId)) {
                 stateDefinitions.push({
                     id: `${prefix}.${definition.relativeId}`,
-                    common: definition.common,
+                    common: this.getLocalizedStateCommon(definition.relativeId, definition.common),
                 });
             }
         }
