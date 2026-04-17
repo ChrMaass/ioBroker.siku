@@ -1,22 +1,42 @@
 import { SIKU_DEVICE_ID_LENGTH } from './siku-constants';
 
+/**
+ * Normalized payload for the broadcast based discovery command.
+ */
 export interface DiscoverMessagePayload {
+    /** Optional IPv4 broadcast address that should be used for discovery. */
     broadcastAddress?: string;
+    /** Optional device password used while discovering secured devices. */
     password?: string;
+    /** Optional receive timeout in milliseconds. */
     timeoutMs?: number;
+    /** Preferred local UDP bind port for discovery traffic. */
     preferredBindPort?: number;
 }
 
+/**
+ * Normalized payload for reading a specific device via the messagebox API.
+ */
 export interface ReadDeviceMessagePayload {
+    /** Target IPv4 address of the device. */
     host: string;
+    /** SIKU device identifier string for the target device. */
     deviceId: string;
+    /** Optional device password. */
     password?: string;
+    /** Optional target UDP port. */
     port?: number;
+    /** Optional request timeout in milliseconds. */
     timeoutMs?: number;
+    /** Requested raw protocol parameters. */
     parameters: unknown[];
 }
 
+/**
+ * Normalized payload for synchronizing the time of one configured device.
+ */
 export interface SyncTimeDeviceMessagePayload {
+    /** Uppercase hexadecimal SIKU device identifier. */
     deviceId: string;
 }
 
@@ -34,6 +54,13 @@ function getObjectPayload(message: unknown, command: string): Record<string, unk
     return message as Record<string, unknown>;
 }
 
+/**
+ * Reads an optional string field and validates basic length constraints.
+ *
+ * @param payload - Object payload to validate
+ * @param fieldName - Name of the expected field
+ * @param options - Additional field constraints
+ */
 function getOptionalStringField(
     payload: Record<string, unknown>,
     fieldName: string,
@@ -59,6 +86,13 @@ function getOptionalStringField(
     return value;
 }
 
+/**
+ * Reads a required string field and applies the same validation as the optional variant.
+ *
+ * @param payload - Object payload to validate
+ * @param fieldName - Name of the expected field
+ * @param options - Additional field constraints
+ */
 function getRequiredStringField(
     payload: Record<string, unknown>,
     fieldName: string,
@@ -72,6 +106,14 @@ function getRequiredStringField(
     return value;
 }
 
+/**
+ * Reads an optional integer field and validates the accepted numeric range.
+ *
+ * @param payload - Object payload to validate
+ * @param fieldName - Name of the expected field
+ * @param minimum - Minimum allowed integer value
+ * @param maximum - Maximum allowed integer value
+ */
 function getOptionalIntegerField(
     payload: Record<string, unknown>,
     fieldName: string,

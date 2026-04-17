@@ -1,0 +1,106 @@
+name: Auto Patch Release
+
+on:
+  workflow_run:
+    workflows: ["Test and Release"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  auto-patch-release:
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      vars.ENABLE_AUTO_PATCH_RELEASE == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the tested main commit
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Evaluate whether an automatic patch release should run
+        id: preflight
+        shell: bash
+        run: |
+          git fetch origin main --tags
+          git checkout -B main origin/main
+          current_main="$(git rev-parse origin/main)"
+          tested_sha="${{ github.event.workflow_run.head_sha }}"
+          should_release=true
+          reason="ready"
+
+          if [ "$current_main" != "$tested_sha" ]; then
+            should_release=false
+            reason="main moved on to $current_main; skipping stale auto-release for $tested_sha"
+          fi
+
+          commit_subject="$(git log -1 --pretty=%s)"
+          if [ "$should_release" = true ] && [[ "$commit_subject" == chore:\ release\ v* ]]; then
+            should_release=false
+            reason="release commit detected"
+          fi
+
+          parent_sha="$(git rev-list --parents -n 1 HEAD | awk '{print $2}')"
+          if [ "$should_release" = true ] && [ -n "$parent_sha" ]; then
+            changed_files="$(git diff --name-only "$parent_sha" HEAD)"
+            printf '%s\n' "$changed_files"
+
+            if printf '%s\n' "$changed_files" | grep -Eq '^(package\.json|package-lock\.json|io-package\.json|README\.md)$'; then
+              should_release=false
+              reason="version-relevant files changed manually in the tested push"
+            fi
+          fi
+
+          echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Explain why the automatic patch release was skipped
+        if: steps.preflight.outputs.should_release != 'true'
+        shell: bash
+        run: echo "${{ steps.preflight.outputs.reason }}"
+
+      - name: Install dependencies
+        if: steps.preflight.outputs.should_release == 'true'
+        run: npm ci
+
+      - name: Configure Git identity
+        if: steps.preflight.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create the next patch release locally
+        if: steps.preflight.outputs.should_release == 'true'
+        run: npx release-script patch --yes --noPush --noWorkflowCheck
+
+      - name: Push release commit and tag
+        if: steps.preflight.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          git fetch origin main --tags
+          current_main="$(git rev-parse origin/main)"
+          tested_sha="${{ github.event.workflow_run.head_sha }}"
+
+          if [ "$current_main" != "$tested_sha" ]; then
+            echo "main moved on to $current_main; skipping stale auto-release for $tested_sha"
+            exit 0
+          fi
+
+          git push origin HEAD:main --follow-tags
