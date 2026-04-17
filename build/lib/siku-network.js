@@ -80,8 +80,28 @@ async function bindSocketWithFallback(preferredPort) {
   }
   throw new Error("Unable to bind UDP socket for discovery");
 }
-async function requestOnce(host, port, payload, timeoutMs) {
-  const socket = import_node_dgram.default.createSocket("udp4");
+async function bindRequestSocket(localPort) {
+  const socket = import_node_dgram.default.createSocket({ type: "udp4", reuseAddr: true });
+  await new Promise((resolve, reject) => {
+    function onListening() {
+      socket.off("error", onError);
+      resolve();
+    }
+    function onError(error) {
+      socket.off("listening", onListening);
+      reject(error);
+    }
+    socket.once("error", onError);
+    socket.once("listening", onListening);
+    socket.bind(localPort);
+  }).catch((error) => {
+    socket.close();
+    throw new Error(`Unable to bind UDP request socket to local port ${localPort}: ${error.message}`);
+  });
+  return socket;
+}
+async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
+  const socket = await bindRequestSocket(localPort);
   return new Promise((resolve, reject) => {
     let finished = false;
     let timeoutHandle;
@@ -112,20 +132,18 @@ async function requestOnce(host, port, payload, timeoutMs) {
         finish(void 0, message);
       }
     });
-    socket.bind(0, () => {
-      socket.send(payload, port, host, (error) => {
-        if (error) {
-          finish(error);
-          return;
-        }
-        timeoutHandle = setTimeout(() => {
-          finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
-        }, timeoutMs);
-      });
+    socket.send(payload, port, host, (error) => {
+      if (error) {
+        finish(error);
+        return;
+      }
+      timeoutHandle = setTimeout(() => {
+        finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
+      }, timeoutMs);
     });
   });
 }
-async function executeRequestWithRetries(host, port, payload, timeoutMs, retryDelaysMs, dependencies) {
+async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, dependencies) {
   var _a, _b;
   const request = (_a = dependencies.requestOnce) != null ? _a : requestOnce;
   const wait = (_b = dependencies.delay) != null ? _b : import_promises.setTimeout;
@@ -135,7 +153,7 @@ async function executeRequestWithRetries(host, port, payload, timeoutMs, retryDe
       if (retryDelay > 0) {
         await wait(retryDelay);
       }
-      const response = await request(host, port, payload, timeoutMs);
+      const response = await request(host, port, payload, timeoutMs, localPort);
       const parsed = (0, import_siku_protocol.parsePacket)(response);
       if (!parsed.checksumValid) {
         throw new Error(`Invalid checksum in response from ${host}`);
@@ -217,26 +235,28 @@ function parseDiscoveryResponse(message, remoteInfo, receivedAt = /* @__PURE__ *
   };
 }
 async function readDevicePacket(options, dependencies = {}) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e;
   const payload = (0, import_siku_protocol.buildReadPacket)(options.deviceId, options.password, options.parameters);
   return executeRequestWithRetries(
     options.host,
     (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT,
     payload,
     (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
-    (_c = options.retryDelaysMs) != null ? _c : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    (_d = (_c = options.localPort) != null ? _c : options.port) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT,
+    (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
     dependencies
   );
 }
 async function writeDevicePacket(options, dependencies = {}) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e;
   const payload = (0, import_siku_protocol.buildWritePacket)(options.deviceId, options.password, import_siku_constants.SikuFunction.ReadWrite, options.parameters);
   const packet = await executeRequestWithRetries(
     options.host,
     (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT,
     payload,
     (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
-    (_c = options.retryDelaysMs) != null ? _c : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    (_d = (_c = options.localPort) != null ? _c : options.port) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT,
+    (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
     dependencies
   );
   validateWriteEcho(packet, options.parameters, options.host);
