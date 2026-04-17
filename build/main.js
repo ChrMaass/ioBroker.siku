@@ -26,7 +26,11 @@ var import_siku_constants = require("./lib/siku-constants");
 var import_siku_message_validation = require("./lib/siku-message-validation");
 var import_siku_network = require("./lib/siku-network");
 var import_siku_protocol = require("./lib/siku-protocol");
+var import_siku_runtime = require("./lib/siku-runtime");
 class Siku extends utils.Adapter {
+  runtimeDevices = /* @__PURE__ */ new Map();
+  pollCycleRunning = false;
+  pollIntervalHandle;
   constructor(options = {}) {
     super({
       ...options,
@@ -43,8 +47,11 @@ class Siku extends utils.Adapter {
    */
   async onReady() {
     await this.setState("info.connection", false, true);
-    this.log.info("Starte SIKU-Adapter im Bootstrap-Modus");
+    this.log.info("Starte SIKU-Adapter mit Multi-Device-Runtime");
     this.logSafeConfig();
+    await this.initializeRuntimeDevices();
+    await this.pollDevices("startup");
+    this.startPolling();
   }
   /**
    * Is called when adapter shuts down - callback has to be called under any circumstances!
@@ -53,6 +60,7 @@ class Siku extends utils.Adapter {
    */
   onUnload(callback) {
     try {
+      this.clearPollingTimer();
       callback();
     } catch (error) {
       this.log.error(`Error during unloading: ${error.message}`);
@@ -122,6 +130,398 @@ class Siku extends utils.Adapter {
       parameters: this.normalizeReadParameters(payload.parameters)
     });
     this.sendMessageResponse(obj, { ok: true, packet: this.serializePacket(packet) });
+  }
+  /**
+   * Creates the runtime registry from the adapter configuration and prepares the ioBroker object tree.
+   */
+  async initializeRuntimeDevices() {
+    var _a;
+    await this.extendObjectAsync("devices", {
+      type: "channel",
+      common: {
+        name: "L\xFCftungsger\xE4te"
+      },
+      native: {}
+    });
+    this.runtimeDevices.clear();
+    for (const [index, configuredDevice] of ((_a = this.config.devices) != null ? _a : []).entries()) {
+      try {
+        const runtimeDevice = (0, import_siku_runtime.normalizeConfiguredDevice)(configuredDevice, index);
+        if (this.runtimeDevices.has(runtimeDevice.id)) {
+          this.log.warn(`Ger\xE4t ${runtimeDevice.id} ist mehrfach konfiguriert und wird nur einmal verwendet.`);
+          continue;
+        }
+        this.runtimeDevices.set(runtimeDevice.id, runtimeDevice);
+        await this.ensureDeviceObjects(runtimeDevice);
+        await this.applyConfiguredDeviceMetadata(runtimeDevice);
+      } catch (error) {
+        this.log.warn(`Ung\xFCltige Ger\xE4tekonfiguration unter devices[${index}]: ${error.message}`);
+      }
+    }
+    if (this.runtimeDevices.size === 0) {
+      this.log.info(
+        "Keine g\xFCltigen L\xFCfter konfiguriert. Discovery und readDevice sind weiterhin \xFCber sendTo nutzbar."
+      );
+    }
+  }
+  /**
+   * Starts the recurring polling timer for all configured devices.
+   */
+  startPolling() {
+    var _a;
+    this.clearPollingTimer();
+    if (this.runtimeDevices.size === 0) {
+      return;
+    }
+    const intervalMs = Math.max((_a = this.config.pollIntervalSec) != null ? _a : 30, 5) * 1e3;
+    this.pollIntervalHandle = setInterval(() => {
+      void this.pollDevices("interval");
+    }, intervalMs);
+    this.log.debug(`Polling gestartet: alle ${intervalMs} ms`);
+  }
+  /**
+   * Stops the recurring polling timer if it is currently active.
+   */
+  clearPollingTimer() {
+    if (this.pollIntervalHandle) {
+      clearInterval(this.pollIntervalHandle);
+      this.pollIntervalHandle = void 0;
+    }
+  }
+  /**
+   * Polls all configured devices sequentially and updates the adapter-wide connection state.
+   *
+   * @param trigger - Human-readable trigger source for debug logging
+   */
+  async pollDevices(trigger) {
+    if (this.pollCycleRunning) {
+      this.log.debug(`Polling (${trigger}) \xFCbersprungen, da bereits ein Zyklus l\xE4uft.`);
+      return;
+    }
+    this.pollCycleRunning = true;
+    let anyConnected = false;
+    try {
+      for (const device of this.runtimeDevices.values()) {
+        anyConnected = await this.pollSingleDevice(device, trigger) || anyConnected;
+      }
+      await this.setStateChangedAsync("info.connection", anyConnected, true);
+    } finally {
+      this.pollCycleRunning = false;
+    }
+  }
+  /**
+   * Polls one configured device and updates its runtime states.
+   *
+   * @param device - Runtime device configuration
+   * @param trigger - Human-readable trigger source for debug logging
+   */
+  async pollSingleDevice(device, trigger) {
+    const pollStartedAt = /* @__PURE__ */ new Date();
+    const pollStartedAtIso = pollStartedAt.toISOString();
+    const pollStartedMs = Date.now();
+    const prefix = device.objectId;
+    await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
+    if (!device.enabled) {
+      await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
+      return false;
+    }
+    try {
+      const packet = await (0, import_siku_network.readDevicePacket)({
+        host: device.host,
+        deviceId: device.id,
+        password: device.password,
+        parameters: import_siku_constants.SIKU_RUNTIME_POLL_PARAMETERS.map((parameter) => ({ parameter }))
+      });
+      const snapshot = (0, import_siku_runtime.decodePollSnapshot)(device.id, packet, pollStartedAt);
+      await this.applyPollSnapshot(device, snapshot, pollStartedAtIso, Date.now() - pollStartedMs);
+      this.log.debug(`Polling erfolgreich f\xFCr ${device.name} (${device.id}) via ${device.host} [${trigger}]`);
+      return true;
+    } catch (error) {
+      const message = error.message;
+      await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, message, true);
+      await this.setStateChangedAsync(`${prefix}.diagnostics.pollDurationMs`, Date.now() - pollStartedMs, true);
+      this.log.warn(`Polling fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${message}`);
+      return false;
+    }
+  }
+  /**
+   * Writes the static metadata derived from the adapter config into the ioBroker state tree.
+   *
+   * @param device - Runtime device configuration
+   */
+  async applyConfiguredDeviceMetadata(device) {
+    const prefix = device.objectId;
+    await this.setStateChangedAsync(`${prefix}.info.host`, device.host, true);
+    await this.setStateChangedAsync(`${prefix}.info.name`, device.name, true);
+    await this.setStateChangedAsync(`${prefix}.info.deviceId`, device.id, true);
+    await this.setStateChangedAsync(`${prefix}.info.enabled`, device.enabled, true);
+    await this.setStateChangedAsync(`${prefix}.info.configuredType`, device.discoveredType, true);
+    if (device.lastSeen) {
+      await this.setStateChangedAsync(`${prefix}.info.lastSeen`, device.lastSeen, true);
+    }
+    await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
+  }
+  /**
+   * Applies a successful poll snapshot to the ioBroker states of one device.
+   *
+   * @param device - Runtime device configuration
+   * @param snapshot - Decoded snapshot from the device response
+   * @param pollStartedAtIso - Timestamp of the poll cycle start
+   * @param durationMs - Measured poll duration in milliseconds
+   */
+  async applyPollSnapshot(device, snapshot, pollStartedAtIso, durationMs) {
+    const prefix = device.objectId;
+    await this.setStateChangedAsync(`${prefix}.info.connection`, true, true);
+    await this.setStateChangedAsync(`${prefix}.info.lastSeen`, snapshot.lastSeen, true);
+    await this.setStateChangedAsync(`${prefix}.diagnostics.lastSuccessfulPoll`, pollStartedAtIso, true);
+    await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, "", true);
+    await this.setStateChangedAsync(`${prefix}.diagnostics.pollDurationMs`, durationMs, true);
+    await this.setStateChangedAsync(`${prefix}.diagnostics.reportedDeviceId`, snapshot.reportedDeviceId, true);
+    if (snapshot.power !== null) {
+      await this.setStateChangedAsync(`${prefix}.control.power`, snapshot.power, true);
+    }
+    if (snapshot.fanSpeed !== null) {
+      await this.setStateChangedAsync(`${prefix}.control.fanSpeed`, snapshot.fanSpeed, true);
+    }
+    if (snapshot.deviceTypeCode !== null) {
+      await this.setStateChangedAsync(`${prefix}.info.deviceTypeCode`, snapshot.deviceTypeCode, true);
+    }
+    if (snapshot.deviceTypeHex !== null) {
+      await this.setStateChangedAsync(`${prefix}.info.deviceTypeHex`, snapshot.deviceTypeHex, true);
+    }
+    if (snapshot.ipAddress !== null) {
+      await this.setStateChangedAsync(`${prefix}.info.ipAddress`, snapshot.ipAddress, true);
+    }
+  }
+  /**
+   * Ensures that the base object tree for one device exists.
+   *
+   * @param device - Runtime device configuration
+   */
+  async ensureDeviceObjects(device) {
+    const prefix = device.objectId;
+    await this.extendObjectAsync(prefix, {
+      type: "device",
+      common: {
+        name: device.name
+      },
+      native: {
+        deviceId: device.id
+      }
+    });
+    for (const channelDefinition of [
+      { id: "info", name: "Information" },
+      { id: "control", name: "Steuerung" },
+      { id: "sensors", name: "Sensoren" },
+      { id: "timers", name: "Timer" },
+      { id: "schedule", name: "Zeitpl\xE4ne" },
+      { id: "diagnostics", name: "Diagnose" }
+    ]) {
+      await this.extendObjectAsync(`${prefix}.${channelDefinition.id}`, {
+        type: "channel",
+        common: {
+          name: channelDefinition.name
+        },
+        native: {}
+      });
+    }
+    const stateDefinitions = [
+      {
+        id: `${prefix}.info.connection`,
+        common: {
+          name: "Verbunden",
+          role: "indicator.connected",
+          type: "boolean",
+          read: true,
+          write: false,
+          def: false
+        }
+      },
+      {
+        id: `${prefix}.info.host`,
+        common: {
+          name: "Host",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.name`,
+        common: {
+          name: "Name",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.deviceId`,
+        common: {
+          name: "Konfigurierte Ger\xE4te-ID",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.configuredType`,
+        common: {
+          name: "Konfigurierter Typ",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.deviceTypeCode`,
+        common: {
+          name: "Ger\xE4tetyp-Code",
+          role: "value",
+          type: "number",
+          read: true,
+          write: false
+        }
+      },
+      {
+        id: `${prefix}.info.deviceTypeHex`,
+        common: {
+          name: "Ger\xE4tetyp Hex",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.ipAddress`,
+        common: {
+          name: "Gemeldete IP-Adresse",
+          role: "info.ip",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.lastSeen`,
+        common: {
+          name: "Zuletzt gesehen",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.lastPoll`,
+        common: {
+          name: "Letzter Poll-Versuch",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.info.enabled`,
+        common: {
+          name: "Aktiviert",
+          role: "indicator",
+          type: "boolean",
+          read: true,
+          write: false,
+          def: false
+        }
+      },
+      {
+        id: `${prefix}.control.power`,
+        common: {
+          name: "Eingeschaltet",
+          role: "switch",
+          type: "boolean",
+          read: true,
+          write: false,
+          def: false
+        }
+      },
+      {
+        id: `${prefix}.control.fanSpeed`,
+        common: {
+          name: "L\xFCfterstufe",
+          role: "level.speed",
+          type: "number",
+          read: true,
+          write: false,
+          def: 0
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.reportedDeviceId`,
+        common: {
+          name: "Zuletzt gemeldete Ger\xE4te-ID",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.lastSuccessfulPoll`,
+        common: {
+          name: "Letzter erfolgreicher Poll",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.lastError`,
+        common: {
+          name: "Letzter Fehler",
+          role: "text",
+          type: "string",
+          read: true,
+          write: false,
+          def: ""
+        }
+      },
+      {
+        id: `${prefix}.diagnostics.pollDurationMs`,
+        common: {
+          name: "Poll-Dauer",
+          role: "value.interval",
+          unit: "ms",
+          type: "number",
+          read: true,
+          write: false,
+          def: 0
+        }
+      }
+    ];
+    for (const stateDefinition of stateDefinitions) {
+      await this.extendObjectAsync(stateDefinition.id, {
+        type: "state",
+        common: stateDefinition.common,
+        native: {}
+      });
+    }
   }
   /**
    * Converts messagebox read parameter definitions into the internal request format.
