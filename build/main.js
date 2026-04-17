@@ -34,6 +34,7 @@ var import_siku_runtime = require("./lib/siku-runtime");
 class Siku extends utils.Adapter {
   runtimeDevices = /* @__PURE__ */ new Map();
   deviceOperationQueues = /* @__PURE__ */ new Map();
+  networkOperationQueue = Promise.resolve();
   pollCycleRunning = false;
   timeCheckRunning = false;
   pollIntervalHandle;
@@ -134,12 +135,14 @@ class Siku extends utils.Adapter {
     try {
       await this.enqueueDeviceOperation(device.id, async () => {
         const request = (0, import_siku_schedule.isScheduleStateId)(relativeId) ? await this.buildScheduleWriteRequestForState(fullStateId, relativeId, state.val) : (0, import_siku_state_mapping.buildWriteRequestForState)(relativeId, state.val);
-        const responsePacket = await (0, import_siku_network.writeDevicePacket)({
-          host: device.host,
-          deviceId: device.id,
-          password: device.password,
-          parameters: [request]
-        });
+        const responsePacket = await this.enqueueNetworkOperation(
+          () => (0, import_siku_network.writeDevicePacket)({
+            host: device.host,
+            deviceId: device.id,
+            password: device.password,
+            parameters: [request]
+          })
+        );
         const mappedUpdates = (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket);
         const scheduleUpdates = (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket);
         await this.applyMappedStateUpdates(device, mappedUpdates);
@@ -166,14 +169,19 @@ class Siku extends utils.Adapter {
    * @param obj - The original ioBroker message
    */
   async handleDiscoverMessage(obj) {
-    var _a, _b, _c;
+    var _a, _b;
     const payload = (0, import_siku_message_validation.normalizeDiscoverMessagePayload)((_a = obj.message) != null ? _a : {});
-    const devices = await (0, import_siku_network.discoverDevices)({
-      broadcastAddress: (_b = payload.broadcastAddress) != null ? _b : this.config.discoveryBroadcastAddress,
-      password: payload.password,
-      timeoutMs: payload.timeoutMs,
-      preferredBindPort: payload.preferredBindPort
-    });
+    const devices = await this.enqueueNetworkOperation(
+      () => {
+        var _a2;
+        return (0, import_siku_network.discoverDevices)({
+          broadcastAddress: (_a2 = payload.broadcastAddress) != null ? _a2 : this.config.discoveryBroadcastAddress,
+          password: payload.password,
+          timeoutMs: payload.timeoutMs,
+          preferredBindPort: payload.preferredBindPort
+        });
+      }
+    );
     await this.applyDiscoveryResults(devices);
     const mergedDevices = (0, import_siku_discovery_config.mergeDiscoveredDevicesIntoConfig)(this.config.devices, devices);
     const response = {
@@ -182,7 +190,7 @@ class Siku extends utils.Adapter {
     };
     if (devices.length === 0) {
       response.result = "discoveryNoDevices";
-    } else if (JSON.stringify(mergedDevices) !== JSON.stringify((_c = this.config.devices) != null ? _c : [])) {
+    } else if (JSON.stringify(mergedDevices) !== JSON.stringify((_b = this.config.devices) != null ? _b : [])) {
       response.result = "discoveryUpdated";
       response.saveConfig = true;
       response.native = this.buildNativeConfig(mergedDevices);
@@ -197,16 +205,20 @@ class Siku extends utils.Adapter {
    * @param obj - The original ioBroker message
    */
   async handleReadDeviceMessage(obj) {
-    var _a;
     const payload = (0, import_siku_message_validation.normalizeReadDeviceMessagePayload)(obj.message);
-    const packet = await (0, import_siku_network.readDevicePacket)({
-      host: payload.host,
-      deviceId: payload.deviceId,
-      password: (_a = payload.password) != null ? _a : import_siku_constants.SIKU_DEFAULT_PASSWORD,
-      port: payload.port,
-      timeoutMs: payload.timeoutMs,
-      parameters: this.normalizeReadParameters(payload.parameters)
-    });
+    const packet = await this.enqueueNetworkOperation(
+      () => {
+        var _a;
+        return (0, import_siku_network.readDevicePacket)({
+          host: payload.host,
+          deviceId: payload.deviceId,
+          password: (_a = payload.password) != null ? _a : import_siku_constants.SIKU_DEFAULT_PASSWORD,
+          port: payload.port,
+          timeoutMs: payload.timeoutMs,
+          parameters: this.normalizeReadParameters(payload.parameters)
+        });
+      }
+    );
     this.sendMessageResponse(obj, { ok: true, packet: this.serializePacket(packet) });
   }
   /**
@@ -367,30 +379,63 @@ class Siku extends utils.Adapter {
     const pollStartedAtIso = pollStartedAt.toISOString();
     const pollStartedMs = Date.now();
     const prefix = device.objectId;
+    const basePollParameters = Array.from(/* @__PURE__ */ new Set([...import_siku_constants.SIKU_RUNTIME_POLL_PARAMETERS, ...import_siku_state_mapping.SIKU_POLL_PARAMETERS])).map(
+      (parameter) => ({ parameter })
+    );
     if (!device.enabled) {
       await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
       return false;
     }
     await this.setStateChangedAsync(`${prefix}.info.lastPoll`, pollStartedAtIso, true);
     try {
-      const packet = await this.enqueueDeviceOperation(
+      const { basePacket, schedulePacket, scheduleReadError } = await this.enqueueDeviceOperation(
         device.id,
-        async () => (0, import_siku_network.readDevicePacket)({
-          host: device.host,
-          deviceId: device.id,
-          password: device.password,
-          parameters: [
-            ...Array.from(/* @__PURE__ */ new Set([...import_siku_constants.SIKU_RUNTIME_POLL_PARAMETERS, ...import_siku_state_mapping.SIKU_POLL_PARAMETERS])).map(
-              (parameter) => ({ parameter })
-            ),
-            ...(0, import_siku_schedule.buildScheduleReadRequests)()
-          ]
-        })
+        async () => {
+          const basePacket2 = await this.enqueueNetworkOperation(
+            () => (0, import_siku_network.readDevicePacket)({
+              host: device.host,
+              deviceId: device.id,
+              password: device.password,
+              parameters: basePollParameters
+            })
+          );
+          let schedulePacket2;
+          let scheduleReadError2;
+          try {
+            schedulePacket2 = await this.enqueueNetworkOperation(
+              () => (0, import_siku_network.readDevicePacket)({
+                host: device.host,
+                deviceId: device.id,
+                password: device.password,
+                parameters: (0, import_siku_schedule.buildScheduleReadRequests)()
+              })
+            );
+          } catch (error) {
+            scheduleReadError2 = error.message;
+          }
+          return {
+            basePacket: basePacket2,
+            schedulePacket: schedulePacket2,
+            scheduleReadError: scheduleReadError2
+          };
+        }
       );
-      const snapshot = (0, import_siku_runtime.decodePollSnapshot)(device.id, packet, pollStartedAt);
+      const snapshot = (0, import_siku_runtime.decodePollSnapshot)(device.id, basePacket, pollStartedAt);
       await this.applyPollSnapshot(device, snapshot, pollStartedAtIso, Date.now() - pollStartedMs);
-      await this.applyMappedStateUpdates(device, (0, import_siku_state_mapping.decodeMappedStateUpdates)(packet));
-      await this.applyMappedStateUpdates(device, (0, import_siku_schedule.decodeScheduleUpdates)(packet));
+      await this.applyMappedStateUpdates(device, (0, import_siku_state_mapping.decodeMappedStateUpdates)(basePacket));
+      if (schedulePacket) {
+        await this.applyMappedStateUpdates(device, (0, import_siku_schedule.decodeScheduleUpdates)(schedulePacket));
+      }
+      await this.setStateChangedAsync(
+        `${prefix}.diagnostics.lastError`,
+        scheduleReadError ? `Zeitplan lesen: ${scheduleReadError}` : "",
+        true
+      );
+      if (scheduleReadError) {
+        this.log.warn(
+          `Zeitplan-Lesen fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${scheduleReadError}`
+        );
+      }
       this.log.debug(`Polling erfolgreich f\xFCr ${device.name} (${device.id}) via ${device.host} [${trigger}]`);
       return true;
     } catch (error) {
@@ -483,12 +528,14 @@ class Siku extends utils.Adapter {
     try {
       const packet = await this.enqueueDeviceOperation(
         device.id,
-        async () => (0, import_siku_network.readDevicePacket)({
-          host: device.host,
-          deviceId: device.id,
-          password: device.password,
-          parameters: import_siku_constants.SIKU_TIME_CHECK_PARAMETERS.map((parameter) => ({ parameter }))
-        })
+        async () => this.enqueueNetworkOperation(
+          () => (0, import_siku_network.readDevicePacket)({
+            host: device.host,
+            deviceId: device.id,
+            password: device.password,
+            parameters: import_siku_constants.SIKU_TIME_CHECK_PARAMETERS.map((parameter) => ({ parameter }))
+          })
+        )
       );
       const rtcSnapshot = (0, import_siku_time.decodeRtcSnapshot)(packet);
       const referenceTime = /* @__PURE__ */ new Date();
@@ -515,15 +562,17 @@ class Siku extends utils.Adapter {
       const syncDate = /* @__PURE__ */ new Date();
       await this.enqueueDeviceOperation(
         device.id,
-        async () => (0, import_siku_network.writeDevicePacket)({
-          host: device.host,
-          deviceId: device.id,
-          password: device.password,
-          parameters: [
-            { parameter: import_siku_constants.SIKU_PARAMETER_RTC_TIME, value: (0, import_siku_time.encodeRtcTime)(syncDate) },
-            { parameter: import_siku_constants.SIKU_PARAMETER_RTC_CALENDAR, value: (0, import_siku_time.encodeRtcCalendar)(syncDate) }
-          ]
-        })
+        async () => this.enqueueNetworkOperation(
+          () => (0, import_siku_network.writeDevicePacket)({
+            host: device.host,
+            deviceId: device.id,
+            password: device.password,
+            parameters: [
+              { parameter: import_siku_constants.SIKU_PARAMETER_RTC_TIME, value: (0, import_siku_time.encodeRtcTime)(syncDate) },
+              { parameter: import_siku_constants.SIKU_PARAMETER_RTC_CALENDAR, value: (0, import_siku_time.encodeRtcCalendar)(syncDate) }
+            ]
+          })
+        )
       );
       const syncedAtIso = syncDate.toISOString();
       await this.setStateChangedAsync(`${prefix}.diagnostics.lastTimeSync`, syncedAtIso, true);
@@ -1064,13 +1113,44 @@ class Siku extends utils.Adapter {
   async enqueueDeviceOperation(deviceId, operation) {
     var _a;
     const previous = (_a = this.deviceOperationQueues.get(deviceId)) != null ? _a : Promise.resolve();
-    const next = previous.catch(() => void 0).then(operation);
-    const settled = next.finally(() => {
-      if (this.deviceOperationQueues.get(deviceId) === settled) {
+    const next = previous.then(
+      () => void 0,
+      () => void 0
+    ).then(() => operation());
+    const tracked = next.then(
+      () => void 0,
+      () => void 0
+    );
+    const cleanup = tracked.finally(() => {
+      if (this.deviceOperationQueues.get(deviceId) === cleanup) {
         this.deviceOperationQueues.delete(deviceId);
       }
     });
-    this.deviceOperationQueues.set(deviceId, settled);
+    this.deviceOperationQueues.set(deviceId, cleanup);
+    return next;
+  }
+  /**
+   * Serializes UDP socket usage globally because the SIKU devices answer request traffic
+   * reliably only on the shared well-known local port 4000.
+   *
+   * @param operation - Async network operation that should use the shared UDP slot
+   */
+  async enqueueNetworkOperation(operation) {
+    const previous = this.networkOperationQueue;
+    const next = previous.then(
+      () => void 0,
+      () => void 0
+    ).then(() => operation());
+    const tracked = next.then(
+      () => void 0,
+      () => void 0
+    );
+    const cleanup = tracked.finally(() => {
+      if (this.networkOperationQueue === cleanup) {
+        this.networkOperationQueue = Promise.resolve();
+      }
+    });
+    this.networkOperationQueue = cleanup;
     return next;
   }
   /**
