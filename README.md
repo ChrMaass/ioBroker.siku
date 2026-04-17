@@ -15,7 +15,7 @@
 
 This adapter integrates **SIKU RV V2** residential ventilation devices into ioBroker.
 
-The current repository state targets a feature-complete **beta** for local-network operation.
+The current repository state targets a feature-complete **public beta** for local-network operation and the official ioBroker `latest` intake.
 
 ## Features
 
@@ -29,6 +29,7 @@ The current repository state targets a feature-complete **beta** for local-netwo
 - Full weekly schedule mapping via ioBroker states
 - Localized enum labels for fan mode and timer mode
 - Readable local timestamp companion states for poll and discovery timestamps
+- Encrypted and protected storage of configured device passwords
 
 ## Supported core functions
 
@@ -79,6 +80,13 @@ Useful scripts:
 
 The adapter was generated with the official ioBroker tooling and is developed in TypeScript.
 
+## CI / CD
+
+- Pull requests run a lean Ubuntu smoke test after linting and type-checking.
+- `main` runs the release-relevant Linux/macOS matrix.
+- Windows runs in a separate scheduled/manual regression workflow because the ioBroker controller bootstrap is significantly slower there.
+- Patch versions can be bumped automatically on successful `main` runs via `.github/workflows/auto-patch-release.yml`.
+
 ## Publication readiness
 
 A short release and repository checklist is available in [RELEASING.md](RELEASING.md).
@@ -98,13 +106,17 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 ### **WORK IN PROGRESS**
 
-- Added a vector-based adapter icon and publication readiness documentation
-- Added CI/CD hardening for tests, Dependabot auto-merge and release preparation
+- Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
+- Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
 
-### 0.0.1 (2026-04-17)
+### 0.1.0 (2026-04-17)
 
-- Initial beta with discovery, multi-device runtime, time checks and schedule support
-- Added localized mode enums, local timestamp companion states and timer countdown visibility
+- First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI
+- Added protected/encrypted native device password handling for JSON-config table rows
+- Split slow Windows adapter tests into a dedicated regression workflow
+- Improved publication metadata, title handling and patch-version release preparation
+
+Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
 ## License
 

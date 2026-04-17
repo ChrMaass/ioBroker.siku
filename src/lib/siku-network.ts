@@ -194,9 +194,6 @@ async function requestOnce(
 
         socket.on('error', finish);
         socket.on('message', (message, remoteInfo) => {
-            if (!message || !Buffer.isBuffer(message) || !remoteInfo) {
-                return;
-            }
             if (remoteInfo.address === host && remoteInfo.port === port) {
                 finish(undefined, message);
             }
@@ -416,10 +413,6 @@ export async function discoverDevices(
         const devices = new Map<string, SikuDiscoveredDevice>();
 
         socket.on('message', (message, remoteInfo) => {
-            if (!message || !Buffer.isBuffer(message) || !remoteInfo) {
-                return;
-            }
-
             if (isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)) {
                 return;
             }

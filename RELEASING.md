@@ -12,6 +12,7 @@ Based on the current `ioBroker.repositories` requirements, the adapter should ha
 - predefined license
 - GitHub Actions based adapter tests
 - valid `type`, `connectionType`, and state roles in `io-package.json`
+- encrypted/protected password handling where credentials are stored
 - package published on npm
 - `iobroker` organization added as npm owner (`bluefox` is the documented contact)
 - Admin 3 / JSON config configuration dialog
@@ -28,7 +29,9 @@ Primary references:
 - [x] JSON config admin page is present
 - [x] CI test workflow is present
 - [x] README is in English and links to manufacturer/device sources
+- [x] Device passwords are stored encrypted and protected
 - [x] Release workflow is prepared for npm trusted publishing
+- [x] Public beta baseline version has been raised to `0.1.0`
 - [ ] npm package `iobroker.siku` has been published
 - [ ] npm owner `bluefox` / ioBroker organization has been added
 - [ ] Adapter has been added to `latest`
@@ -48,7 +51,7 @@ Primary references:
 
 After that, tagged releases can be published from GitHub Actions without storing a long-lived npm token.
 
-## Optional automatic patch versioning
+## Automatic patch versioning
 
 If every successful push to `main` should automatically receive the next patch version, enable the repository
 variable `ENABLE_AUTO_PATCH_RELEASE=true`.
@@ -60,8 +63,19 @@ The workflow `.github/workflows/auto-patch-release.yml` then:
 3. runs the existing `release-script` as a patch release
 4. pushes the generated release commit and git tag back to `main`
 
-This keeps `package.json`, `package-lock.json`, `io-package.json` and the ioBroker news entry synchronized
-without maintaining a second custom versioning implementation.
+Recommended versioning strategy for this repository:
+
+- use **minor versions** (`0.2.0`, `0.3.0`, …) for visible feature sets or publication milestones
+- use **patch versions** (`0.1.1`, `0.1.2`, …) for bug fixes and review follow-ups
+- use the first npm / `latest` submission as **`0.1.x` public beta**, not as `0.0.x`
+
+## CI strategy
+
+- Pull requests: lint + type-check + one Ubuntu smoke test for fast feedback
+- `main`: release-relevant Linux/macOS matrix
+- Windows: separate scheduled/manual regression workflow because controller bootstrap is much slower on Windows runners
+
+This keeps day-to-day iteration fast without dropping cross-platform coverage entirely.
 
 ## Release flow for this repository
 
