@@ -133,6 +133,9 @@ function isDiscoverySelfEcho(message, remoteInfo, localAddresses, boundPort, dis
 function parseDiscoveryResponse(message, remoteInfo, receivedAt = /* @__PURE__ */ new Date()) {
   var _a;
   const parsed = (0, import_siku_protocol.parsePacket)(message);
+  if (!parsed.checksumValid || parsed.functionCode !== import_siku_constants.SikuFunction.Response) {
+    return null;
+  }
   const idEntry = parsed.entries.find((entry) => entry.parameter === import_siku_constants.SIKU_PARAMETER_DEVICE_ID && !entry.unsupported);
   const deviceTypeEntry = parsed.entries.find(
     (entry) => entry.parameter === import_siku_constants.SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported
@@ -168,7 +171,16 @@ async function readDevicePacket(options, dependencies = {}) {
         payload,
         (_e = options.timeoutMs) != null ? _e : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS
       );
-      return (0, import_siku_protocol.parsePacket)(response);
+      const parsed = (0, import_siku_protocol.parsePacket)(response);
+      if (!parsed.checksumValid) {
+        throw new Error(`Invalid checksum in response from ${options.host}`);
+      }
+      if (parsed.functionCode !== import_siku_constants.SikuFunction.Response) {
+        throw new Error(
+          `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, "0")} in response from ${options.host}`
+        );
+      }
+      return parsed;
     } catch (error) {
       lastError = error;
     }

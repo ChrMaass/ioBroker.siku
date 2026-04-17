@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { expect } from 'chai';
 import { buildDiscoveryPacket, buildPacket, decodeUnsignedLE } from './siku-protocol';
+import { SikuFunction } from './siku-constants';
 import { discoverDevices, isDiscoverySelfEcho, parseDiscoveryResponse, readDevicePacket } from './siku-network';
 
 class FakeDiscoverySocket extends EventEmitter {
@@ -76,6 +77,32 @@ describe('SIKU network helpers', () => {
         });
     });
 
+    it('ignores discovery packets with invalid checksums or unexpected function codes', () => {
+        const validPacket = Buffer.from(discoveryResponseHex, 'hex');
+        const invalidChecksumPacket = Buffer.from(validPacket);
+        invalidChecksumPacket[invalidChecksumPacket.length - 1] ^= 0xff;
+
+        const nonResponsePacket = buildPacket(
+            Buffer.from('001800354353530B', 'ascii'),
+            '1111',
+            SikuFunction.Read,
+            Buffer.from([0x7c, 0xb9]),
+        );
+
+        expect(
+            parseDiscoveryResponse(invalidChecksumPacket, {
+                address: '192.168.55.46',
+                port: 4000,
+            }),
+        ).to.equal(null);
+        expect(
+            parseDiscoveryResponse(nonResponsePacket, {
+                address: '192.168.55.46',
+                port: 4000,
+            }),
+        ).to.equal(null);
+    });
+
     it('discovers devices through the injected UDP socket without keeping the local broadcast echo', async () => {
         const discoveryPacket = buildDiscoveryPacket();
         const fakeSocket = new FakeDiscoverySocket(4000, socket => {
@@ -126,7 +153,12 @@ describe('SIKU network helpers', () => {
     it('retries read requests after parse errors and returns the first valid response', async () => {
         const attemptResponses = [
             Buffer.from('FDFD02', 'hex'),
-            buildPacket(Buffer.from('001800354353530B', 'ascii'), '1111', 6, Buffer.from([0x01, 0x02])),
+            buildPacket(
+                Buffer.from('001800354353530B', 'ascii'),
+                '1111',
+                SikuFunction.Response,
+                Buffer.from([0x01, 0x02]),
+            ),
         ];
         const waitCalls: number[] = [];
         let callCount = 0;
@@ -152,6 +184,49 @@ describe('SIKU network helpers', () => {
         expect(packet.entries).to.have.length(1);
         expect(packet.entries[0].parameter).to.equal(0x0001);
         expect(decodeUnsignedLE(packet.entries[0].value)).to.equal(0x02);
+    });
+
+    it('retries after a response with an invalid checksum', async () => {
+        const invalidChecksumPacket = buildPacket(
+            Buffer.from('001800354353530B', 'ascii'),
+            '1111',
+            SikuFunction.Response,
+            Buffer.from([0x01, 0x02]),
+        );
+        invalidChecksumPacket[invalidChecksumPacket.length - 1] ^= 0xff;
+
+        const attemptResponses = [
+            invalidChecksumPacket,
+            buildPacket(
+                Buffer.from('001800354353530B', 'ascii'),
+                '1111',
+                SikuFunction.Response,
+                Buffer.from([0x01, 0x02]),
+            ),
+        ];
+        const waitCalls: number[] = [];
+        let callCount = 0;
+
+        const packet = await readDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [{ parameter: 0x0001 }],
+            },
+            {
+                requestOnce: () => Promise.resolve(attemptResponses[callCount++]),
+                delay: timeoutMs => {
+                    waitCalls.push(timeoutMs);
+                    return Promise.resolve();
+                },
+            },
+        );
+
+        expect(callCount).to.equal(2);
+        expect(waitCalls).to.deep.equal([200]);
+        expect(packet.checksumValid).to.equal(true);
+        expect(packet.functionCode).to.equal(SikuFunction.Response);
     });
 
     it('throws the last network error once all retries are exhausted', async () => {
