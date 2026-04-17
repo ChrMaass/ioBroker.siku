@@ -48,6 +48,21 @@ Primary references:
 
 After that, tagged releases can be published from GitHub Actions without storing a long-lived npm token.
 
+## Optional automatic patch versioning
+
+If every successful push to `main` should automatically receive the next patch version, enable the repository
+variable `ENABLE_AUTO_PATCH_RELEASE=true`.
+
+The workflow `.github/workflows/auto-patch-release.yml` then:
+
+1. waits for a successful `Test and Release` run on `main`
+2. skips commits that already changed the version files manually
+3. runs the existing `release-script` as a patch release
+4. pushes the generated release commit and git tag back to `main`
+
+This keeps `package.json`, `package-lock.json`, `io-package.json` and the ioBroker news entry synchronized
+without maintaining a second custom versioning implementation.
+
 ## Release flow for this repository
 
 1. Ensure `main` is green in GitHub Actions.

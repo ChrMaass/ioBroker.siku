@@ -1,15 +1,18 @@
 # Configure here which dependency updates should be merged automatically.
-# The recommended configuration is the following:
+# This repository intentionally keeps auto-merges conservative:
+# - production dependencies: only patch updates and security-driven minor bumps
+# - development dependencies: patch and minor updates
+# - majors stay manual and are reviewed in dedicated PRs
 - match:
-    # Only merge patches for production dependencies
     dependency_type: production
     update_type: "semver:patch"
 - match:
-    # Except for security fixes, here we allow minor patches
     dependency_type: production
     update_type: "security:minor"
 - match:
-    # and development dependencies can have a minor update, too
+    dependency_type: development
+    update_type: "semver:patch"
+- match:
     dependency_type: development
     update_type: "semver:minor"
 

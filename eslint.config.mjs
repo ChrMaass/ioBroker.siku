@@ -25,7 +25,9 @@ export default [
         // you may disable some 'jsdoc' warnings - but using jsdoc is highly recommended
         // as this improves maintainability. jsdoc warnings will not block build process.
         rules: {
-            // 'jsdoc/require-jsdoc': 'off',
+            // For this adapter we document externally visible helpers where it adds value,
+            // but we do not require boilerplate JSDoc for every TypeScript interface member.
+            'jsdoc/require-jsdoc': 'off',
             // 'jsdoc/require-param': 'off',
             // 'jsdoc/require-param-description': 'off',
             // 'jsdoc/require-returns-description': 'off',

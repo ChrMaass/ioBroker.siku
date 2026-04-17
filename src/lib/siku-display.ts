@@ -74,6 +74,12 @@ function normalizeLanguage(language: string | undefined): keyof typeof LANGUAGE_
     return 'en';
 }
 
+/**
+ * Returns the localized enum state labels for a mapped adapter state.
+ *
+ * @param relativeId - Relative ioBroker state id inside one device tree
+ * @param language - Active ioBroker language
+ */
 export function getLocalizedEnumStates(
     relativeId: string,
     language: string | undefined,
@@ -86,6 +92,13 @@ export function getLocalizedEnumStates(
     return enumTranslations[normalizeLanguage(language)];
 }
 
+/**
+ * Returns the localized label for a numeric mode enum value.
+ *
+ * @param relativeId - Relative ioBroker state id inside one device tree
+ * @param value - Raw state value that should map to an enum label
+ * @param language - Active ioBroker language
+ */
 export function getLocalizedModeLabel(
     relativeId: string,
     value: ioBroker.StateValue,
@@ -98,6 +111,12 @@ export function getLocalizedModeLabel(
     return getLocalizedEnumStates(relativeId, language)?.[String(value)];
 }
 
+/**
+ * Formats an ISO timestamp in the current UI language and the local host time zone.
+ *
+ * @param value - ISO timestamp string to format
+ * @param language - Active ioBroker language
+ */
 export function formatLocalTimestamp(value: string, language: string | undefined): string {
     if (!value) {
         return '';
