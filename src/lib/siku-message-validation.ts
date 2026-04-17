@@ -16,6 +16,10 @@ export interface ReadDeviceMessagePayload {
     parameters: unknown[];
 }
 
+export interface SyncTimeDeviceMessagePayload {
+    deviceId: string;
+}
+
 interface StringFieldOptions {
     allowEmpty?: boolean;
     exactLength?: number;
@@ -123,5 +127,18 @@ export function normalizeReadDeviceMessagePayload(message: unknown): ReadDeviceM
         port: getOptionalIntegerField(payload, 'port', 1, 65535),
         timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, Number.MAX_SAFE_INTEGER),
         parameters,
+    };
+}
+
+/**
+ * Validates and normalizes the payload of a `syncTimeDevice` messagebox command.
+ *
+ * @param message - Raw message payload from the admin UI or sendTo
+ */
+export function normalizeSyncTimeDeviceMessagePayload(message: unknown): SyncTimeDeviceMessagePayload {
+    const payload = getObjectPayload(message, 'syncTimeDevice');
+
+    return {
+        deviceId: getRequiredStringField(payload, 'deviceId', { exactLength: SIKU_DEVICE_ID_LENGTH }).toUpperCase(),
     };
 }

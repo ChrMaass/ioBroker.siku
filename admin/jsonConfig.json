@@ -17,7 +17,6 @@
         "discoveryBroadcastAddress": {
             "type": "text",
             "label": "discoveryBroadcastAddress",
-            "newLine": true,
             "xs": 12,
             "sm": 12,
             "md": 6,
@@ -28,7 +27,6 @@
         "timeCheckIntervalHours": {
             "type": "number",
             "label": "timeCheckIntervalHours",
-            "newLine": true,
             "min": 24,
             "step": 1,
             "xs": 12,
@@ -40,8 +38,7 @@
         "timeSyncThresholdSec": {
             "type": "number",
             "label": "timeSyncThresholdSec",
-            "newLine": true,
-            "min": 1,
+            "min": 10,
             "step": 1,
             "xs": 12,
             "sm": 12,
@@ -49,15 +46,139 @@
             "lg": 4,
             "xl": 4
         },
-        "configInfo": {
+        "discoveryInfo": {
             "type": "staticText",
             "newLine": true,
-            "text": "configInfo",
+            "text": "discoveryInfo",
             "xs": 12,
             "sm": 12,
             "md": 12,
             "lg": 12,
             "xl": 12
+        },
+        "discoverDevicesAction": {
+            "type": "sendTo",
+            "label": "discoverDevicesAction",
+            "command": "discover",
+            "data": {
+                "broadcastAddress": "${data.discoveryBroadcastAddress}"
+            },
+            "variant": "contained",
+            "icon": "search",
+            "showProcess": true,
+            "useNative": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "result": {
+                "discoveryUpdated": "discoveryUpdated",
+                "discoveryUnchanged": "discoveryUnchanged",
+                "discoveryNoDevices": "discoveryNoDevices"
+            }
+        },
+        "syncTimeAllAction": {
+            "type": "sendTo",
+            "label": "syncTimeAllAction",
+            "command": "syncTimeAll",
+            "data": {},
+            "variant": "outlined",
+            "icon": "settings",
+            "showProcess": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "disabled": "!data.devices || !data.devices.length",
+            "result": {
+                "timeCheckSynced": "timeCheckSynced",
+                "timeCheckNoSyncNeeded": "timeCheckNoSyncNeeded",
+                "timeCheckCompletedWithErrors": "timeCheckCompletedWithErrors",
+                "timeCheckBusy": "timeCheckBusy",
+                "timeCheckNoDevices": "timeCheckNoDevices"
+            }
+        },
+        "timeSyncInfo": {
+            "type": "staticText",
+            "newLine": true,
+            "text": "timeSyncInfo",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        },
+        "devices": {
+            "type": "table",
+            "label": "devicesTable",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12,
+            "showSecondAddAt": 5,
+            "compact": true,
+            "items": [
+                {
+                    "type": "checkbox",
+                    "attr": "enabled",
+                    "title": "deviceEnabled",
+                    "width": "8%",
+                    "default": true,
+                    "sort": true
+                },
+                {
+                    "type": "text",
+                    "attr": "name",
+                    "title": "deviceName",
+                    "width": "18%",
+                    "default": ""
+                },
+                {
+                    "type": "text",
+                    "attr": "id",
+                    "title": "deviceId",
+                    "width": "20%",
+                    "default": ""
+                },
+                {
+                    "type": "text",
+                    "attr": "host",
+                    "title": "deviceHost",
+                    "width": "16%",
+                    "default": ""
+                },
+                {
+                    "type": "password",
+                    "attr": "password",
+                    "title": "devicePassword",
+                    "width": "12%",
+                    "default": "1111",
+                    "maxLength": 8,
+                    "visible": true
+                },
+                {
+                    "type": "text",
+                    "attr": "discoveredType",
+                    "title": "deviceDiscoveredType",
+                    "width": "12%",
+                    "default": "",
+                    "readOnly": true,
+                    "filter": false
+                },
+                {
+                    "type": "text",
+                    "attr": "lastSeen",
+                    "title": "deviceLastSeen",
+                    "width": "14%",
+                    "default": "",
+                    "readOnly": true,
+                    "filter": false
+                }
+            ]
         }
     }
 }

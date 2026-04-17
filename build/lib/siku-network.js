@@ -31,7 +31,8 @@ __export(siku_network_exports, {
   discoverDevices: () => discoverDevices,
   isDiscoverySelfEcho: () => isDiscoverySelfEcho,
   parseDiscoveryResponse: () => parseDiscoveryResponse,
-  readDevicePacket: () => readDevicePacket
+  readDevicePacket: () => readDevicePacket,
+  writeDevicePacket: () => writeDevicePacket
 });
 module.exports = __toCommonJS(siku_network_exports);
 var import_node_dgram = __toESM(require("node:dgram"));
@@ -124,6 +125,33 @@ async function requestOnce(host, port, payload, timeoutMs) {
     });
   });
 }
+async function executeRequestWithRetries(host, port, payload, timeoutMs, retryDelaysMs, dependencies) {
+  var _a, _b;
+  const request = (_a = dependencies.requestOnce) != null ? _a : requestOnce;
+  const wait = (_b = dependencies.delay) != null ? _b : import_promises.setTimeout;
+  let lastError;
+  for (const retryDelay of retryDelaysMs) {
+    try {
+      if (retryDelay > 0) {
+        await wait(retryDelay);
+      }
+      const response = await request(host, port, payload, timeoutMs);
+      const parsed = (0, import_siku_protocol.parsePacket)(response);
+      if (!parsed.checksumValid) {
+        throw new Error(`Invalid checksum in response from ${host}`);
+      }
+      if (parsed.functionCode !== import_siku_constants.SikuFunction.Response) {
+        throw new Error(
+          `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, "0")} in response from ${host}`
+        );
+      }
+      return parsed;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError != null ? lastError : new Error(`Unable to communicate with ${host}`);
+}
 function isDiscoverySelfEcho(message, remoteInfo, localAddresses, boundPort, discoveryPacket) {
   if (message.equals(discoveryPacket)) {
     return true;
@@ -159,38 +187,28 @@ function parseDiscoveryResponse(message, remoteInfo, receivedAt = /* @__PURE__ *
   };
 }
 async function readDevicePacket(options, dependencies = {}) {
-  var _a, _b, _c, _d, _e;
+  var _a, _b, _c;
   const payload = (0, import_siku_protocol.buildReadPacket)(options.deviceId, options.password, options.parameters);
-  const retryDelays = (_a = options.retryDelaysMs) != null ? _a : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS;
-  const request = (_b = dependencies.requestOnce) != null ? _b : requestOnce;
-  const wait = (_c = dependencies.delay) != null ? _c : import_promises.setTimeout;
-  let lastError;
-  for (const retryDelay of retryDelays) {
-    try {
-      if (retryDelay > 0) {
-        await wait(retryDelay);
-      }
-      const response = await request(
-        options.host,
-        (_d = options.port) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT,
-        payload,
-        (_e = options.timeoutMs) != null ? _e : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS
-      );
-      const parsed = (0, import_siku_protocol.parsePacket)(response);
-      if (!parsed.checksumValid) {
-        throw new Error(`Invalid checksum in response from ${options.host}`);
-      }
-      if (parsed.functionCode !== import_siku_constants.SikuFunction.Response) {
-        throw new Error(
-          `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, "0")} in response from ${options.host}`
-        );
-      }
-      return parsed;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError != null ? lastError : new Error(`Unable to read from ${options.host}`);
+  return executeRequestWithRetries(
+    options.host,
+    (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT,
+    payload,
+    (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
+    (_c = options.retryDelaysMs) != null ? _c : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    dependencies
+  );
+}
+async function writeDevicePacket(options, dependencies = {}) {
+  var _a, _b, _c;
+  const payload = (0, import_siku_protocol.buildWritePacket)(options.deviceId, options.password, import_siku_constants.SikuFunction.ReadWrite, options.parameters);
+  return executeRequestWithRetries(
+    options.host,
+    (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT,
+    payload,
+    (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
+    (_c = options.retryDelaysMs) != null ? _c : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    dependencies
+  );
 }
 async function discoverDevices(options, dependencies = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
@@ -236,6 +254,7 @@ async function discoverDevices(options, dependencies = {}) {
   discoverDevices,
   isDiscoverySelfEcho,
   parseDiscoveryResponse,
-  readDevicePacket
+  readDevicePacket,
+  writeDevicePacket
 });
 //# sourceMappingURL=siku-network.js.map
