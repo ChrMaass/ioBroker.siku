@@ -1,137 +1,150 @@
 {
-    "common": {
-        "name": "siku",
-        "version": "0.1.1",
-        "news": {
-            "0.1.1": {
-                "en": "Adapter-check metadata cleanup for latest intake and npm publication follow-up",
-                "de": "Bereinigung der Adapter-Check-Metadaten für die latest-Aufnahme und den npm-Folge-Release",
-                "ru": "Очистка метаданных для проверки адаптера перед включением в latest и последующим npm-релизом",
-                "pt": "Limpeza de metadados para a verificação do adaptador visando a inclusão em latest e o release npm subsequente",
-                "nl": "Opschonen van adapter-check metadata voor opname in latest en de daaropvolgende npm-release",
-                "fr": "Nettoyage des métadonnées pour la vérification de l’adaptateur avant l’intégration dans latest et la publication npm suivante",
-                "it": "Pulizia dei metadati per il controllo dell’adattatore in vista dell’inclusione in latest e della successiva pubblicazione npm",
-                "es": "Limpieza de metadatos para la comprobación del adaptador de cara a la inclusión en latest y la siguiente publicación en npm",
-                "pl": "Porządkowanie metadanych dla kontroli adaptera przed dodaniem do latest i kolejną publikacją w npm",
-                "uk": "Очищення метаданих для перевірки адаптера перед додаванням до latest і наступним релізом в npm",
-                "zh-cn": "为 latest 收录和后续 npm 发布清理适配器检查元数据"
-            },
-            "0.1.0": {
-                "en": "First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI",
-                "de": "Erste öffentliche Beta mit ioBroker-Publikationshärtung, verschlüsselten Geräte-Passwörtern und gestraffter CI",
-                "ru": "Первая публичная бета с подготовкой к публикации в ioBroker, шифрованием паролей устройств и оптимизированным CI",
-                "pt": "Primeira beta pública com preparação para publicação no ioBroker, senhas de dispositivos criptografadas e CI otimizada",
-                "nl": "Eerste publieke beta met ioBroker-publicatievoorbereiding, versleutelde apparaatwachtwoorden en gestroomlijnde CI",
-                "fr": "Première bêta publique avec préparation à la publication ioBroker, mots de passe d’appareil chiffrés et CI allégée",
-                "it": "Prima beta pubblica con preparazione alla pubblicazione su ioBroker, password dei dispositivi cifrate e CI ottimizzata",
-                "es": "Primera beta pública con preparación para la publicación en ioBroker, contraseñas de dispositivos cifradas y CI optimizada",
-                "pl": "Pierwsza publiczna beta z przygotowaniem do publikacji w ioBroker, szyfrowaniem haseł urządzeń i usprawnionym CI",
-                "uk": "Перша публічна бета з підготовкою до публікації в ioBroker, шифруванням паролів пристроїв і оптимізованим CI",
-                "zh-cn": "首个公开测试版，包含 ioBroker 收录准备、设备密码加密和精简后的 CI"
-            }
-        },
-        "titleLang": {
-            "en": "SIKU ventilation",
-            "de": "SIKU Lüftung",
-            "ru": "Вентиляция SIKU",
-            "pt": "Ventilação SIKU",
-            "nl": "SIKU-ventilatie",
-            "fr": "Ventilation SIKU",
-            "it": "Ventilazione SIKU",
-            "es": "Ventilación SIKU",
-            "pl": "Wentylacja SIKU",
-            "uk": "Вентиляція SIKU",
-            "zh-cn": "SIKU 通风"
-        },
-        "desc": {
-            "en": "ioBroker adapter for SIKU RV V2 ventilation devices",
-            "de": "ioBroker-Adapter für SIKU RV V2 Lüftungsgeräte",
-            "ru": "Адаптер ioBroker для аппаратов вентиляции SIKU RV V2",
-            "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2",
-            "nl": "ioBroker-adapter voor SIKU RV V2-ventilatieapparaten",
-            "fr": "Adaptateur ioBroker pour appareils de ventilation SIKU RV V2",
-            "it": "Adattatore ioBroker per dispositivi di ventilazione SIKU RV V2",
-            "es": "Adaptador ioBroker para dispositivos de ventilación SIKU RV V2",
-            "pl": "Adapter ioBroker do urządzeń wentylacyjnych SIKU RV V2",
-            "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2",
-            "zh-cn": "用于 SIKU RV V2 通风设备的 ioBroker 适配器"
-        },
-        "authors": [
-            "Christian Maaß <christian@maass.it>"
-        ],
-        "keywords": [
-            "siku",
-            "ventilation",
-            "fan",
-            "udp",
-            "rv v2"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "siku.svg",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/ChrMaass/ioBroker.siku/main/admin/siku.svg",
-        "readme": "https://github.com/ChrMaass/ioBroker.siku/blob/main/README.md",
-        "loglevel": "info",
-        "tier": 3,
-        "mode": "daemon",
-        "type": "climate-control",
-        "compact": true,
-        "messagebox": true,
-        "connectionType": "local",
-        "dataSource": "poll",
-        "adminUI": {
-            "config": "json"
-        },
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.6.20"
-            }
-        ]
+  "common": {
+    "name": "siku",
+    "version": "0.1.2",
+    "news": {
+      "0.1.2": {
+        "en": "Added automated npm publishing from GitHub Actions and automatic GitHub release notes",
+        "de": "Automatische npm-Veröffentlichung aus GitHub Actions und automatische GitHub-Release-Notes hinzugefügt",
+        "ru": "Добавлена автоматическая публикация в npm из GitHub Actions и автоматические заметки к релизам GitHub",
+        "pt": "Adicionada publicação automática no npm a partir do GitHub Actions e notas de versão automáticas no GitHub",
+        "nl": "Automatisch publiceren naar npm vanuit GitHub Actions en automatische GitHub-release-opmerkingen toegevoegd",
+        "fr": "Ajout de la publication automatique sur npm depuis GitHub Actions et des notes de version GitHub automatiques",
+        "it": "Aggiunta la pubblicazione automatica su npm da GitHub Actions e le note di rilascio automatiche di GitHub",
+        "es": "Se añadió la publicación automática en npm desde GitHub Actions y las notas de versión automáticas de GitHub",
+        "pl": "Dodano automatyczne publikowanie do npm z GitHub Actions oraz automatyczne notatki wydań GitHub",
+        "uk": "Додано автоматичну публікацію в npm з GitHub Actions і автоматичні примітки до релізів GitHub",
+        "zh-cn": "已添加从 GitHub Actions 自动发布到 npm 以及自动生成 GitHub 发布说明"
+      },
+      "0.1.1": {
+        "en": "Adapter-check metadata cleanup for latest intake and npm publication follow-up",
+        "de": "Bereinigung der Adapter-Check-Metadaten für die latest-Aufnahme und den npm-Folge-Release",
+        "ru": "Очистка метаданных для проверки адаптера перед включением в latest и последующим npm-релизом",
+        "pt": "Limpeza de metadados para a verificação do adaptador visando a inclusão em latest e o release npm subsequente",
+        "nl": "Opschonen van adapter-check metadata voor opname in latest en de daaropvolgende npm-release",
+        "fr": "Nettoyage des métadonnées pour la vérification de l’adaptateur avant l’intégration dans latest et la publication npm suivante",
+        "it": "Pulizia dei metadati per il controllo dell’adattatore in vista dell’inclusione in latest e della successiva pubblicazione npm",
+        "es": "Limpieza de metadatos para la comprobación del adaptador de cara a la inclusión en latest y la siguiente publicación en npm",
+        "pl": "Porządkowanie metadanych dla kontroli adaptera przed dodaniem do latest i kolejną publikacją w npm",
+        "uk": "Очищення метаданих для перевірки адаптера перед додаванням до latest і наступним релізом в npm",
+        "zh-cn": "为 latest 收录和后续 npm 发布清理适配器检查元数据"
+      },
+      "0.1.0": {
+        "en": "First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI",
+        "de": "Erste öffentliche Beta mit ioBroker-Publikationshärtung, verschlüsselten Geräte-Passwörtern und gestraffter CI",
+        "ru": "Первая публичная бета с подготовкой к публикации в ioBroker, шифрованием паролей устройств и оптимизированным CI",
+        "pt": "Primeira beta pública com preparação para publicação no ioBroker, senhas de dispositivos criptografadas e CI otimizada",
+        "nl": "Eerste publieke beta met ioBroker-publicatievoorbereiding, versleutelde apparaatwachtwoorden en gestroomlijnde CI",
+        "fr": "Première bêta publique avec préparation à la publication ioBroker, mots de passe d’appareil chiffrés et CI allégée",
+        "it": "Prima beta pubblica con preparazione alla pubblicazione su ioBroker, password dei dispositivi cifrate e CI ottimizzata",
+        "es": "Primera beta pública con preparación para la publicación en ioBroker, contraseñas de dispositivos cifradas y CI optimizada",
+        "pl": "Pierwsza publiczna beta z przygotowaniem do publikacji w ioBroker, szyfrowaniem haseł urządzeń i usprawnionym CI",
+        "uk": "Перша публічна бета з підготовкою до публікації в ioBroker, шифруванням паролів пристроїв і оптимізованим CI",
+        "zh-cn": "首个公开测试版，包含 ioBroker 收录准备、设备密码加密和精简后的 CI"
+      }
     },
-    "native": {
-        "pollIntervalSec": 30,
-        "discoveryBroadcastAddress": "255.255.255.255",
-        "timeCheckIntervalHours": 24,
-        "timeSyncThresholdSec": 10,
-        "devices": []
+    "titleLang": {
+      "en": "SIKU ventilation",
+      "de": "SIKU Lüftung",
+      "ru": "Вентиляция SIKU",
+      "pt": "Ventilação SIKU",
+      "nl": "SIKU-ventilatie",
+      "fr": "Ventilation SIKU",
+      "it": "Ventilazione SIKU",
+      "es": "Ventilación SIKU",
+      "pl": "Wentylacja SIKU",
+      "uk": "Вентиляція SIKU",
+      "zh-cn": "SIKU 通风"
     },
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info",
-            "type": "channel",
-            "common": {
-                "name": "Information"
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "role": "indicator.connected",
-                "name": "Device or service connected",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        }
+    "desc": {
+      "en": "ioBroker adapter for SIKU RV V2 ventilation devices",
+      "de": "ioBroker-Adapter für SIKU RV V2 Lüftungsgeräte",
+      "ru": "Адаптер ioBroker для аппаратов вентиляции SIKU RV V2",
+      "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2",
+      "nl": "ioBroker-adapter voor SIKU RV V2-ventilatieapparaten",
+      "fr": "Adaptateur ioBroker pour appareils de ventilation SIKU RV V2",
+      "it": "Adattatore ioBroker per dispositivi di ventilazione SIKU RV V2",
+      "es": "Adaptador ioBroker para dispositivos de ventilación SIKU RV V2",
+      "pl": "Adapter ioBroker do urządzeń wentylacyjnych SIKU RV V2",
+      "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2",
+      "zh-cn": "用于 SIKU RV V2 通风设备的 ioBroker 适配器"
+    },
+    "authors": [
+      "Christian Maaß <christian@maass.it>"
     ],
-    "protectedNative": [
-        "devices.password"
+    "keywords": [
+      "siku",
+      "ventilation",
+      "fan",
+      "udp",
+      "rv v2"
     ],
-    "encryptedNative": [
-        "devices.password"
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "siku.svg",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/ChrMaass/ioBroker.siku/main/admin/siku.svg",
+    "readme": "https://github.com/ChrMaass/ioBroker.siku/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "climate-control",
+    "compact": true,
+    "messagebox": true,
+    "connectionType": "local",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.6.20"
+      }
     ]
+  },
+  "native": {
+    "pollIntervalSec": 30,
+    "discoveryBroadcastAddress": "255.255.255.255",
+    "timeCheckIntervalHours": 24,
+    "timeSyncThresholdSec": 10,
+    "devices": []
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ],
+  "protectedNative": [
+    "devices.password"
+  ],
+  "encryptedNative": [
+    "devices.password"
+  ]
 }

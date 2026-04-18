@@ -105,8 +105,7 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-
-### **WORK IN PROGRESS**
+### 0.1.2 (2026-04-18)
 
 - Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
 - Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
@@ -126,6 +125,11 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Improved publication metadata, title handling and patch-version release preparation
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+
+### 0.0.1 (2026-04-17)
+
+- Initial beta with discovery, multi-device runtime, time checks and schedule support
+- Added localized mode enums, local timestamp companion states and timer countdown visibility
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "iobroker.siku",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ioBroker adapter for SIKU RV V2 ventilation devices",
   "author": {
     "name": "Christian Maaß",
