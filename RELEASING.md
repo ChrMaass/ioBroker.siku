@@ -31,9 +31,10 @@ Primary references:
 - [x] README is in English and links to manufacturer/device sources
 - [x] Device passwords are stored encrypted and protected
 - [x] Release workflow is prepared for npm trusted publishing
+- [x] GitHub release notes can be generated automatically for each published tag
 - [x] Public beta baseline version has been raised to `0.1.0`
-- [ ] npm package `iobroker.siku` has been published
-- [ ] npm owner `bluefox` / ioBroker organization has been added
+- [x] npm package `iobroker.siku` has been published
+- [x] npm owner `bluefox` / ioBroker organization has been added
 - [ ] Adapter has been added to `latest`
 - [ ] Adapter has been field-tested long enough for `stable`
 
@@ -45,9 +46,10 @@ Primary references:
    - owner: `ChrMaass`
    - repository: `ioBroker.siku`
    - workflow: `test-and-release.yml`
-3. Add the documented emergency owner:
+3. (Optional) Add a repository secret `COPILOT_GITHUB_TOKEN` with a GitHub personal access token that can use Copilot CLI. If present, the release job prepends a short Copilot-generated summary to the generated GitHub release notes.
+4. Add the documented emergency owner:
    - `npm owner add bluefox iobroker.siku`
-4. Enable the repository variable `ENABLE_NPM_RELEASE=true` in GitHub.
+5. Enable the repository variable `ENABLE_NPM_RELEASE=true` in GitHub.
 
 After that, tagged releases can be published from GitHub Actions without storing a long-lived npm token.
 
@@ -62,6 +64,7 @@ The workflow `.github/workflows/auto-patch-release.yml` then:
 2. skips commits that already changed the version files manually
 3. runs the existing `release-script` as a patch release
 4. pushes the generated release commit and git tag back to `main`
+5. manually dispatches the trusted `test-and-release.yml` workflow for the new tag, because a tag push created by `GITHUB_TOKEN` does not start another push workflow on its own
 
 Recommended versioning strategy for this repository:
 
@@ -74,6 +77,7 @@ Recommended versioning strategy for this repository:
 - Pull requests: lint + type-check + one Ubuntu smoke test for fast feedback
 - `main`: release-relevant Linux/macOS matrix
 - Windows: separate scheduled/manual regression workflow because controller bootstrap is much slower on Windows runners
+- Tags / release dispatches: publish job with trusted npm publishing, automatic GitHub release notes and an optional Copilot-generated summary
 
 This keeps day-to-day iteration fast without dropping cross-platform coverage entirely.
 
@@ -87,6 +91,7 @@ This keeps day-to-day iteration fast without dropping cross-platform coverage en
 4. The release script creates a git tag.
 5. GitHub Actions runs the release workflow.
 6. If trusted publishing is configured and `ENABLE_NPM_RELEASE=true`, the tag build publishes to npm.
+7. The same release job also creates a GitHub Release with automatic notes, categorized via `.github/release.yml`.
 
 ## After the first npm release
 

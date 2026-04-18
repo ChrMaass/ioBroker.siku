@@ -86,6 +86,8 @@ The adapter was generated with the official ioBroker tooling and is developed in
 - `main` runs the release-relevant Linux/macOS matrix.
 - Windows runs in a separate scheduled/manual regression workflow because the ioBroker controller bootstrap is significantly slower there.
 - Patch versions can be bumped automatically on successful `main` runs via `.github/workflows/auto-patch-release.yml`.
+- Tagged releases are published to npm directly from GitHub Actions via Trusted Publishing.
+- GitHub Releases are created automatically with generated release notes; an optional Copilot summary can be prepended when the repository secret `COPILOT_GITHUB_TOKEN` is configured.
 
 ## Publication readiness
 
@@ -108,6 +110,7 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 - Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
 - Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
+- Added Trusted Publishing based npm CD plus automatic GitHub release notes with optional Copilot summaries
 
 ### 0.1.1 (2026-04-18)
 
