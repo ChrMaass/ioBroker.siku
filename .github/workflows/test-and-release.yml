@@ -148,7 +148,6 @@ jobs:
         with:
           node-version: '24.x'
           cache: npm
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -182,7 +181,14 @@ jobs:
 
       - name: Publish package to npm via Trusted Publishing
         if: steps.npm-status.outputs.already_published != 'true'
-        run: npm publish --access public
+        shell: bash
+        run: |
+          # Trusted Publishing should use the GitHub OIDC identity directly.
+          # A pre-generated .npmrc or NODE_AUTH_TOKEN can cause npm to prefer
+          # classic token auth and skip the OIDC handshake.
+          unset NPM_CONFIG_USERCONFIG
+          unset NODE_AUTH_TOKEN
+          npm publish --access public
 
       - name: Determine previous release tag
         id: previous
