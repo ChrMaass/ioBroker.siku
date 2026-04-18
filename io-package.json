@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "siku",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "news": {
+            "0.1.1": {
+                "en": "Adapter-check metadata cleanup for latest intake and npm publication follow-up",
+                "de": "Bereinigung der Adapter-Check-Metadaten für die latest-Aufnahme und den npm-Folge-Release",
+                "ru": "Очистка метаданных для проверки адаптера перед включением в latest и последующим npm-релизом",
+                "pt": "Limpeza de metadados para a verificação do adaptador visando a inclusão em latest e o release npm subsequente",
+                "nl": "Opschonen van adapter-check metadata voor opname in latest en de daaropvolgende npm-release",
+                "fr": "Nettoyage des métadonnées pour la vérification de l’adaptateur avant l’intégration dans latest et la publication npm suivante",
+                "it": "Pulizia dei metadati per il controllo dell’adattatore in vista dell’inclusione in latest e della successiva pubblicazione npm",
+                "es": "Limpieza de metadatos para la comprobación del adaptador de cara a la inclusión en latest y la siguiente publicación en npm",
+                "pl": "Porządkowanie metadanych dla kontroli adaptera przed dodaniem do latest i kolejną publikacją w npm",
+                "uk": "Очищення метаданих для перевірки адаптера перед додаванням до latest і наступним релізом в npm",
+                "zh-cn": "为 latest 收录和后续 npm 发布清理适配器检查元数据"
+            },
             "0.1.0": {
                 "en": "First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI",
                 "de": "Erste öffentliche Beta mit ioBroker-Publikationshärtung, verschlüsselten Geräte-Passwörtern und gestraffter CI",
@@ -15,19 +28,6 @@
                 "pl": "Pierwsza publiczna beta z przygotowaniem do publikacji w ioBroker, szyfrowaniem haseł urządzeń i usprawnionym CI",
                 "uk": "Перша публічна бета з підготовкою до публікації в ioBroker, шифруванням паролів пристроїв і оптимізованим CI",
                 "zh-cn": "首个公开测试版，包含 ioBroker 收录准备、设备密码加密和精简后的 CI"
-            },
-            "0.0.1": {
-                "en": "Beta with discovery, multi-device runtime, time checks and schedule support",
-                "de": "Beta mit Discovery, Multi-Device-Runtime, Zeitprüfung und Zeitplan-Unterstützung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "uk": "Початкова версія",
-                "zh-cn": "首次出版"
             }
         },
         "titleLang": {
@@ -60,7 +60,6 @@
             "Christian Maaß <christian@maass.it>"
         ],
         "keywords": [
-            "ioBroker",
             "siku",
             "ventilation",
             "fan",
@@ -96,8 +95,7 @@
             {
                 "admin": ">=7.6.20"
             }
-        ],
-        "title": "SIKU ventilation"
+        ]
     },
     "native": {
         "pollIntervalSec": 30,
