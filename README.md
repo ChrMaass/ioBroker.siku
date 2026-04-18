@@ -105,6 +105,10 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.1.4 (2026-04-18)
+
+- Hardened the GitHub release workflow so npm Trusted Publishing prefers GitHub OIDC over token-based npm auth
+
 ### 0.1.3 (2026-04-18)
 
 - Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility

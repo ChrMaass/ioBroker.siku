@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "news": {
+      "0.1.4": {
+        "en": "Adjusted the GitHub release workflow so npm Trusted Publishing prefers the GitHub OIDC identity instead of token-based npm auth",
+        "de": "Den GitHub-Release-Workflow so angepasst, dass npm Trusted Publishing die GitHub-OIDC-Identität statt tokenbasierter npm-Authentifizierung bevorzugt",
+        "ru": "Скорректирован GitHub release workflow, чтобы npm Trusted Publishing предпочитал GitHub OIDC вместо токен-авторизации npm",
+        "pt": "Ajustado o fluxo de release do GitHub para que o npm Trusted Publishing prefira a identidade OIDC do GitHub em vez da autenticação por token do npm",
+        "nl": "De GitHub-releaseworkflow aangepast zodat npm Trusted Publishing de GitHub-OIDC-identiteit verkiest boven tokengebaseerde npm-authenticatie",
+        "fr": "Ajustement du workflow de publication GitHub afin que npm Trusted Publishing privilégie l’identité OIDC GitHub au lieu de l’authentification npm par jeton",
+        "it": "Adeguato il workflow di release GitHub affinché npm Trusted Publishing privilegi l’identità OIDC di GitHub invece dell’autenticazione npm basata su token",
+        "es": "Se ajustó el flujo de publicación de GitHub para que npm Trusted Publishing prefiera la identidad OIDC de GitHub en lugar de la autenticación npm basada en token",
+        "pl": "Dostosowano workflow wydań GitHub tak, aby npm Trusted Publishing preferował tożsamość GitHub OIDC zamiast uwierzytelniania npm tokenem",
+        "uk": "Скориговано GitHub release workflow так, щоб npm Trusted Publishing надавав перевагу GitHub OIDC замість токен-автентифікації npm",
+        "zh-cn": "已调整 GitHub 发布工作流，使 npm Trusted Publishing 优先使用 GitHub OIDC 身份而不是基于令牌的 npm 身份验证"
+      },
       "0.1.3": {
         "en": "Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility",
         "de": "Die Metadaten der GitHub-Repository-URL für die Kompatibilität mit npm Trusted Publishing normalisiert",
