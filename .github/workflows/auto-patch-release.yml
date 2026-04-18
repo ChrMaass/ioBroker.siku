@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -90,6 +91,15 @@ jobs:
         if: steps.preflight.outputs.should_release == 'true'
         run: npx release-script patch --yes --noPush --noWorkflowCheck
 
+      - name: Capture release metadata
+        if: steps.preflight.outputs.should_release == 'true'
+        id: release
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
       - name: Push release commit and tag
         if: steps.preflight.outputs.should_release == 'true'
         shell: bash
@@ -104,3 +114,15 @@ jobs:
           fi
 
           git push origin HEAD:main --follow-tags
+
+      - name: Dispatch release publishing workflow for the new tag
+        if: steps.preflight.outputs.should_release == 'true' && vars.ENABLE_NPM_RELEASE == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh workflow run test-and-release.yml \
+            --ref "$RELEASE_TAG" \
+            -f release_tag="$RELEASE_TAG" \
+            -f publish_only=true
