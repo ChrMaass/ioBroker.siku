@@ -105,6 +105,10 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.1.3 (2026-04-18)
+
+- Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility
+
 ### 0.1.2 (2026-04-18)
 
 - Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation

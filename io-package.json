@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "news": {
+      "0.1.3": {
+        "en": "Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility",
+        "de": "Die Metadaten der GitHub-Repository-URL für die Kompatibilität mit npm Trusted Publishing normalisiert",
+        "ru": "Нормализованы метаданные URL GitHub-репозитория для совместимости с npm Trusted Publishing",
+        "pt": "Normalizados os metadados da URL do repositório GitHub para compatibilidade com o npm Trusted Publishing",
+        "nl": "De metadata van de GitHub-repository-URL genormaliseerd voor compatibiliteit met npm Trusted Publishing",
+        "fr": "Métadonnées de l’URL du dépôt GitHub normalisées pour la compatibilité avec npm Trusted Publishing",
+        "it": "Normalizzati i metadati dell’URL del repository GitHub per la compatibilità con npm Trusted Publishing",
+        "es": "Se normalizaron los metadatos de la URL del repositorio de GitHub para la compatibilidad con npm Trusted Publishing",
+        "pl": "Znormalizowano metadane adresu URL repozytorium GitHub pod kątem zgodności z npm Trusted Publishing",
+        "uk": "Нормалізовано метадані URL GitHub-репозиторію для сумісності з npm Trusted Publishing",
+        "zh-cn": "已规范 GitHub 仓库 URL 元数据，以兼容 npm Trusted Publishing"
+      },
       "0.1.2": {
         "en": "Added automated npm publishing from GitHub Actions and automatic GitHub release notes",
         "de": "Automatische npm-Veröffentlichung aus GitHub Actions und automatische GitHub-Release-Notes hinzugefügt",
