@@ -109,6 +109,12 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
 - Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
 
+### 0.1.1 (2026-04-18)
+
+- Cleaned up adapter-check metadata for the `latest` intake and npm follow-up release
+- Removed deprecated `common.title` usage and trimmed io-package keywords
+- Simplified the io-package news list to published npm versions only
+
 ### 0.1.0 (2026-04-17)
 
 - First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI
