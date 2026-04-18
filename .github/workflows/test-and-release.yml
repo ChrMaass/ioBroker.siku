@@ -117,7 +117,8 @@ jobs:
       contents: write
 
     env:
-      
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
     steps:
       - name: Resolve release tag
         id: release
