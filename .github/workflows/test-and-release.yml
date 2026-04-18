@@ -116,6 +116,8 @@ jobs:
       id-token: write
       contents: write
 
+    env:
+      
     steps:
       - name: Resolve release tag
         id: release
@@ -191,15 +193,14 @@ jobs:
           echo "tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
       - name: Install GitHub Copilot CLI for optional release notes
-        if: secrets.COPILOT_GITHUB_TOKEN != ''
+        if: env.COPILOT_GITHUB_TOKEN != ''
         run: npm install --global @github/copilot
 
       - name: Generate optional Copilot release summary
-        if: secrets.COPILOT_GITHUB_TOKEN != ''
+        if: env.COPILOT_GITHUB_TOKEN != ''
         continue-on-error: true
         shell: bash
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
