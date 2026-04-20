@@ -279,20 +279,22 @@ class Siku extends utils.Adapter {
     const hadLegacyInlinePasswords = currentDevices.some(
       (device) => typeof device.password === "string" && device.password.trim().length > 0
     );
+    const rawConfiguredPasswordRegistry = this.config.devicePasswords;
     let migratedRegistry;
     try {
-      migratedRegistry = (0, import_siku_password_config.buildDevicePasswordRegistry)(currentDevices, this.config.devicePasswords);
+      migratedRegistry = (0, import_siku_password_config.buildDevicePasswordRegistry)(currentDevices, rawConfiguredPasswordRegistry);
     } catch (error) {
       this.log.warn(`Ger\xE4tepassw\xF6rter konnten nicht automatisch migriert werden: ${error.message}`);
-      this.config.devicePasswords = this.getConfiguredPasswordRegistry();
+      this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(this.getConfiguredPasswordRegistry());
       return;
     }
     const normalizedCurrentRegistry = this.getConfiguredPasswordRegistry();
     const devicesChanged = JSON.stringify(strippedDevices) !== JSON.stringify(currentDevices);
     const registryChanged = JSON.stringify(migratedRegistry) !== JSON.stringify(normalizedCurrentRegistry);
+    const registryShapeChanged = !Array.isArray(rawConfiguredPasswordRegistry);
     this.config.devices = strippedDevices;
-    this.config.devicePasswords = migratedRegistry;
-    if (!devicesChanged && !registryChanged) {
+    this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(migratedRegistry);
+    if (!devicesChanged && !registryChanged && !registryShapeChanged) {
       return;
     }
     const instanceObjectId = `system.adapter.${this.namespace}`;
@@ -736,7 +738,7 @@ class Siku extends utils.Adapter {
       timeCheckIntervalHours: this.config.timeCheckIntervalHours,
       timeSyncThresholdSec: this.config.timeSyncThresholdSec,
       devices,
-      devicePasswords
+      devicePasswords: (0, import_siku_password_config.serializeDevicePasswordRegistry)(devicePasswords)
     };
   }
   /**

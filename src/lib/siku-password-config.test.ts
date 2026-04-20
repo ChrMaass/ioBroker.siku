@@ -3,6 +3,7 @@ import {
     buildDevicePasswordRegistry,
     normalizeDevicePasswordRegistry,
     resolveConfiguredDevicePassword,
+    serializeDevicePasswordRegistry,
     stripLegacyPasswordsFromDevices,
 } from './siku-password-config';
 
@@ -19,6 +20,29 @@ describe('SIKU password config helpers', () => {
             '001800354353530B': '1234',
             '004500324353530B': '1111',
         });
+    });
+
+    it('accepts the schema-compliant password table format and serializes it deterministically', () => {
+        expect(
+            normalizeDevicePasswordRegistry([
+                { id: '004500324353530b', password: ' 1111 ' },
+                { id: 'broken', password: '9999' },
+                { id: '001800354353530B', password: '1234' },
+            ]),
+        ).to.deep.equal({
+            '001800354353530B': '1234',
+            '004500324353530B': '1111',
+        });
+
+        expect(
+            serializeDevicePasswordRegistry({
+                '004500324353530B': '1111',
+                '001800354353530B': '1234',
+            }),
+        ).to.deep.equal([
+            { id: '001800354353530B', password: '1234' },
+            { id: '004500324353530B', password: '1111' },
+        ]);
     });
 
     it('prefers the dedicated registry over legacy inline passwords', () => {

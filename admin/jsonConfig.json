@@ -192,8 +192,6 @@
             "xl": 12,
             "showSecondAddAt": 5,
             "compact": true,
-            "objKeyName": "id",
-            "objValueName": "password",
             "uniqueColumns": [
                 "id"
             ],
@@ -213,6 +211,9 @@
                     "default": "1111",
                     "visible": true
                 }
+            ],
+            "encryptedAttributes": [
+                "password"
             ]
         }
     }

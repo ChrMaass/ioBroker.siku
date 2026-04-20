@@ -25,6 +25,7 @@ import { formatLocalTimestamp, getLocalizedEnumStates, getLocalizedModeLabel } f
 import {
     buildDevicePasswordRegistry,
     normalizeDevicePasswordRegistry,
+    serializeDevicePasswordRegistry,
     stripLegacyPasswordsFromDevices,
     type SikuDevicePasswordRegistry,
 } from './lib/siku-password-config';
@@ -361,24 +362,26 @@ class Siku extends utils.Adapter {
         const hadLegacyInlinePasswords = currentDevices.some(
             device => typeof device.password === 'string' && device.password.trim().length > 0,
         );
+        const rawConfiguredPasswordRegistry = this.config.devicePasswords;
 
         let migratedRegistry: SikuDevicePasswordRegistry;
         try {
-            migratedRegistry = buildDevicePasswordRegistry(currentDevices, this.config.devicePasswords);
+            migratedRegistry = buildDevicePasswordRegistry(currentDevices, rawConfiguredPasswordRegistry);
         } catch (error) {
             this.log.warn(`Gerätepasswörter konnten nicht automatisch migriert werden: ${(error as Error).message}`);
-            this.config.devicePasswords = this.getConfiguredPasswordRegistry();
+            this.config.devicePasswords = serializeDevicePasswordRegistry(this.getConfiguredPasswordRegistry());
             return;
         }
 
         const normalizedCurrentRegistry = this.getConfiguredPasswordRegistry();
         const devicesChanged = JSON.stringify(strippedDevices) !== JSON.stringify(currentDevices);
         const registryChanged = JSON.stringify(migratedRegistry) !== JSON.stringify(normalizedCurrentRegistry);
+        const registryShapeChanged = !Array.isArray(rawConfiguredPasswordRegistry);
 
         this.config.devices = strippedDevices;
-        this.config.devicePasswords = migratedRegistry;
+        this.config.devicePasswords = serializeDevicePasswordRegistry(migratedRegistry);
 
-        if (!devicesChanged && !registryChanged) {
+        if (!devicesChanged && !registryChanged && !registryShapeChanged) {
             return;
         }
 
@@ -882,7 +885,7 @@ class Siku extends utils.Adapter {
             timeCheckIntervalHours: this.config.timeCheckIntervalHours,
             timeSyncThresholdSec: this.config.timeSyncThresholdSec,
             devices,
-            devicePasswords,
+            devicePasswords: serializeDevicePasswordRegistry(devicePasswords),
         };
     }
 
