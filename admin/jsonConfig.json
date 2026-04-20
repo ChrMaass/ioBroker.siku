@@ -148,22 +148,14 @@
                     "type": "text",
                     "attr": "host",
                     "title": "deviceHost",
-                    "width": "16%",
+                    "width": "22%",
                     "default": ""
-                },
-                {
-                    "type": "password",
-                    "attr": "password",
-                    "title": "devicePassword",
-                    "width": "12%",
-                    "default": "1111",
-                    "visible": true
                 },
                 {
                     "type": "text",
                     "attr": "discoveredType",
                     "title": "deviceDiscoveredType",
-                    "width": "12%",
+                    "width": "14%",
                     "default": "",
                     "readOnly": true,
                     "filter": false
@@ -172,10 +164,54 @@
                     "type": "text",
                     "attr": "lastSeen",
                     "title": "deviceLastSeen",
-                    "width": "14%",
+                    "width": "18%",
                     "default": "",
                     "readOnly": true,
                     "filter": false
+                }
+            ]
+        },
+        "devicePasswordsInfo": {
+            "type": "staticText",
+            "newLine": true,
+            "text": "devicePasswordsInfo",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        },
+        "devicePasswords": {
+            "type": "table",
+            "label": "devicePasswordsTable",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12,
+            "showSecondAddAt": 5,
+            "compact": true,
+            "objKeyName": "id",
+            "objValueName": "password",
+            "uniqueColumns": [
+                "id"
+            ],
+            "items": [
+                {
+                    "type": "text",
+                    "attr": "id",
+                    "title": "deviceId",
+                    "width": "45%",
+                    "default": ""
+                },
+                {
+                    "type": "password",
+                    "attr": "password",
+                    "title": "devicePassword",
+                    "width": "55%",
+                    "default": "1111",
+                    "visible": true
                 }
             ]
         }

@@ -27,6 +27,7 @@ var import_siku_constants = require("./lib/siku-constants");
 var import_siku_message_validation = require("./lib/siku-message-validation");
 var import_siku_network = require("./lib/siku-network");
 var import_siku_display = require("./lib/siku-display");
+var import_siku_password_config = require("./lib/siku-password-config");
 var import_siku_schedule = require("./lib/siku-schedule");
 var import_siku_state_mapping = require("./lib/siku-state-mapping");
 var import_siku_protocol = require("./lib/siku-protocol");
@@ -60,6 +61,7 @@ class Siku extends utils.Adapter {
   async onReady() {
     await this.setState("info.connection", false, true);
     this.log.info("Starte SIKU-Adapter mit Multi-Device-Runtime");
+    await this.migrateLegacyPasswordConfig();
     this.logSafeConfig();
     await this.initializeRuntimeDevices();
     await this.subscribeWritableStates();
@@ -185,16 +187,21 @@ class Siku extends utils.Adapter {
     );
     await this.applyDiscoveryResults(devices);
     const mergedDevices = (0, import_siku_discovery_config.mergeDiscoveredDevicesIntoConfig)(this.config.devices, devices);
+    const mergedDevicePasswords = (0, import_siku_discovery_config.mergeDiscoveredDevicePasswordsIntoConfig)(
+      this.config.devices,
+      this.config.devicePasswords,
+      mergedDevices
+    );
     const response = {
       ok: true,
       devices
     };
     if (devices.length === 0) {
       response.result = "discoveryNoDevices";
-    } else if (JSON.stringify(mergedDevices) !== JSON.stringify((_b = this.config.devices) != null ? _b : [])) {
+    } else if (JSON.stringify(mergedDevices) !== JSON.stringify((_b = this.config.devices) != null ? _b : []) || JSON.stringify(mergedDevicePasswords) !== JSON.stringify(this.getConfiguredPasswordRegistry())) {
       response.result = "discoveryUpdated";
       response.saveConfig = true;
-      response.native = this.buildNativeConfig(mergedDevices);
+      response.native = this.buildNativeConfig(mergedDevices, mergedDevicePasswords);
     } else {
       response.result = "discoveryUnchanged";
     }
@@ -255,6 +262,56 @@ class Siku extends utils.Adapter {
     });
   }
   /**
+   * Returns the normalized dedicated device password registry from the current adapter config.
+   */
+  getConfiguredPasswordRegistry() {
+    return (0, import_siku_password_config.normalizeDevicePasswordRegistry)(this.config.devicePasswords);
+  }
+  /**
+   * Migrates legacy inline device passwords from `devices[].password` into the dedicated
+   * top-level password registry so RepoChecker warnings can be avoided without losing
+   * existing credentials on already configured installations.
+   */
+  async migrateLegacyPasswordConfig() {
+    var _a;
+    const currentDevices = (_a = this.config.devices) != null ? _a : [];
+    const strippedDevices = (0, import_siku_password_config.stripLegacyPasswordsFromDevices)(currentDevices);
+    const hadLegacyInlinePasswords = currentDevices.some(
+      (device) => typeof device.password === "string" && device.password.trim().length > 0
+    );
+    let migratedRegistry;
+    try {
+      migratedRegistry = (0, import_siku_password_config.buildDevicePasswordRegistry)(currentDevices, this.config.devicePasswords);
+    } catch (error) {
+      this.log.warn(`Ger\xE4tepassw\xF6rter konnten nicht automatisch migriert werden: ${error.message}`);
+      this.config.devicePasswords = this.getConfiguredPasswordRegistry();
+      return;
+    }
+    const normalizedCurrentRegistry = this.getConfiguredPasswordRegistry();
+    const devicesChanged = JSON.stringify(strippedDevices) !== JSON.stringify(currentDevices);
+    const registryChanged = JSON.stringify(migratedRegistry) !== JSON.stringify(normalizedCurrentRegistry);
+    this.config.devices = strippedDevices;
+    this.config.devicePasswords = migratedRegistry;
+    if (!devicesChanged && !registryChanged) {
+      return;
+    }
+    const instanceObjectId = `system.adapter.${this.namespace}`;
+    const instanceObject = await this.getForeignObjectAsync(instanceObjectId);
+    if (!instanceObject) {
+      this.log.warn(
+        "Die Adapter-Konfiguration konnte nach der Passwort-Migration nicht automatisch gespeichert werden."
+      );
+      return;
+    }
+    instanceObject.native = this.buildNativeConfig(strippedDevices, migratedRegistry);
+    await this.setForeignObjectAsync(instanceObjectId, instanceObject);
+    if (hadLegacyInlinePasswords) {
+      this.log.info("Ger\xE4tepassw\xF6rter wurden in die separate verschl\xFCsselte Passwort-Registry migriert.");
+    } else {
+      this.log.info("Ger\xE4tepasswort-Registry wurde auf die neue Konfigurationsstruktur bereinigt.");
+    }
+  }
+  /**
    * Creates the runtime registry from the adapter configuration and prepares the ioBroker object tree.
    */
   async initializeRuntimeDevices() {
@@ -267,9 +324,10 @@ class Siku extends utils.Adapter {
       native: {}
     });
     this.runtimeDevices.clear();
+    const passwordRegistry = this.getConfiguredPasswordRegistry();
     for (const [index, configuredDevice] of ((_a = this.config.devices) != null ? _a : []).entries()) {
       try {
-        const runtimeDevice = (0, import_siku_runtime.normalizeConfiguredDevice)(configuredDevice, index);
+        const runtimeDevice = (0, import_siku_runtime.normalizeConfiguredDevice)(configuredDevice, index, passwordRegistry);
         if (this.runtimeDevices.has(runtimeDevice.id)) {
           this.log.warn(`Ger\xE4t ${runtimeDevice.id} ist mehrfach konfiguriert und wird nur einmal verwendet.`);
           continue;
@@ -669,14 +727,16 @@ class Siku extends utils.Adapter {
    * Builds the full native config object that the JSON config sendTo button can reuse.
    *
    * @param devices - Updated device list to send back to the admin UI
+   * @param devicePasswords - Updated password registry to send back to the admin UI
    */
-  buildNativeConfig(devices) {
+  buildNativeConfig(devices, devicePasswords = this.getConfiguredPasswordRegistry()) {
     return {
       pollIntervalSec: this.config.pollIntervalSec,
       discoveryBroadcastAddress: this.config.discoveryBroadcastAddress,
       timeCheckIntervalHours: this.config.timeCheckIntervalHours,
       timeSyncThresholdSec: this.config.timeSyncThresholdSec,
-      devices
+      devices,
+      devicePasswords
     };
   }
   /**
@@ -1363,6 +1423,7 @@ class Siku extends utils.Adapter {
     var _a;
     const devices = (_a = this.config.devices) != null ? _a : [];
     const enabledDevices = devices.filter((device) => device.enabled).length;
+    const passwordRegistryEntries = Object.keys(this.getConfiguredPasswordRegistry()).length;
     this.log.debug(
       `Konfiguration: ${JSON.stringify({
         pollIntervalSec: this.config.pollIntervalSec,
@@ -1370,7 +1431,8 @@ class Siku extends utils.Adapter {
         timeCheckIntervalHours: this.config.timeCheckIntervalHours,
         timeSyncThresholdSec: this.config.timeSyncThresholdSec,
         configuredDevices: devices.length,
-        enabledDevices
+        enabledDevices,
+        passwordRegistryEntries
       })}`
     );
   }

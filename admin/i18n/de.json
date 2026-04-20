@@ -5,7 +5,7 @@
     "timeCheckIntervalHours": "Zeitprüfung alle X Stunden",
     "timeSyncThresholdSec": "Zeitsync erst ab Drift > X Sekunden",
     "configInfo": "Die Multi-Device-Konfiguration und Discovery-Aktionen werden in den nächsten Entwicklungsschritten ergänzt.",
-    "discoveryInfo": "Mit dem Discovery-Button lassen sich SIKU-Master per UDP-Broadcast identifizieren und in die Gerätetabelle übernehmen. Vorhandene Namen, Passwörter und Aktivierungen bleiben erhalten.",
+    "discoveryInfo": "Über den Discovery-Button lassen sich SIKU-Master per UDP-Broadcast finden und in die Gerätetabelle übernehmen. Bestehende Namen, Aktivierungsflags und geräte-ID-basierte Zugangsdaten bleiben erhalten.",
     "discoverDevicesAction": "Lüfter im Netzwerk identifizieren",
     "discoveryUpdated": "Die Discovery hat die Geräteliste aktualisiert. Bitte die Konfiguration speichern.",
     "discoveryUnchanged": "Die Discovery hat Geräte gefunden, aber die Konfiguration hat sich nicht verändert.",
@@ -24,5 +24,7 @@
     "deviceHost": "Host/IP",
     "devicePassword": "Passwort",
     "deviceDiscoveredType": "Erkannter Typ",
-    "deviceLastSeen": "Letzte Discovery"
+    "deviceLastSeen": "Letzte Discovery",
+    "devicePasswordsInfo": "Die Gerätepasswörter werden separat in einer verschlüsselten Registry pro Geräte-ID gespeichert. Fehlt für ein Gerät ein Eintrag, verwendet der Adapter das Standardpasswort 1111.",
+    "devicePasswordsTable": "Gerätepasswörter nach Geräte-ID"
 }

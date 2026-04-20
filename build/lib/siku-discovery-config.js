@@ -19,10 +19,12 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var siku_discovery_config_exports = {};
 __export(siku_discovery_config_exports, {
   formatDiscoveredType: () => formatDiscoveredType,
+  mergeDiscoveredDevicePasswordsIntoConfig: () => mergeDiscoveredDevicePasswordsIntoConfig,
   mergeDiscoveredDevicesIntoConfig: () => mergeDiscoveredDevicesIntoConfig
 });
 module.exports = __toCommonJS(siku_discovery_config_exports);
 var import_siku_constants = require("./siku-constants");
+var import_siku_password_config = require("./siku-password-config");
 function formatDiscoveredType(device) {
   if (device.deviceTypeHex && device.deviceTypeCode !== null) {
     return `${device.deviceTypeHex} (${device.deviceTypeCode})`;
@@ -61,7 +63,6 @@ function mergeDiscoveredDevicesIntoConfig(configuredDevices, discoveredDevices) 
       id: discoveredDevice.deviceId,
       host: discoveredDevice.host,
       name: `L\xFCfter ${discoveredDevice.deviceId.slice(-4)}`,
-      password: import_siku_constants.SIKU_DEFAULT_PASSWORD,
       enabled: true,
       discoveredType,
       lastSeen: discoveredDevice.receivedAt
@@ -69,9 +70,21 @@ function mergeDiscoveredDevicesIntoConfig(configuredDevices, discoveredDevices) 
   }
   return mergedDevices;
 }
+function mergeDiscoveredDevicePasswordsIntoConfig(configuredDevices, currentRegistry, mergedDevices) {
+  const registry = (0, import_siku_password_config.buildDevicePasswordRegistry)(configuredDevices, currentRegistry);
+  for (const device of mergedDevices) {
+    const normalizedId = (0, import_siku_password_config.normalizeDevicePasswordRegistryKey)(device.id);
+    if (!normalizedId || registry[normalizedId]) {
+      continue;
+    }
+    registry[normalizedId] = import_siku_constants.SIKU_DEFAULT_PASSWORD;
+  }
+  return registry;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   formatDiscoveredType,
+  mergeDiscoveredDevicePasswordsIntoConfig,
   mergeDiscoveredDevicesIntoConfig
 });
 //# sourceMappingURL=siku-discovery-config.js.map

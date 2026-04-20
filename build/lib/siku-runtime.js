@@ -26,6 +26,7 @@ module.exports = __toCommonJS(siku_runtime_exports);
 var import_node_net = require("node:net");
 var import_siku_constants = require("./siku-constants");
 var import_siku_protocol = require("./siku-protocol");
+var import_siku_password_config = require("./siku-password-config");
 function getPacketEntry(packet, parameter) {
   return packet.entries.find((entry) => entry.parameter === parameter && !entry.unsupported);
 }
@@ -35,7 +36,7 @@ function getTrimmedString(value, fieldName) {
   }
   return value.trim();
 }
-function normalizeConfiguredDevice(device, index) {
+function normalizeConfiguredDevice(device, index, passwordRegistry = void 0) {
   if (typeof device !== "object" || device === null) {
     throw new Error(`devices[${index}] must be an object`);
   }
@@ -52,10 +53,7 @@ function normalizeConfiguredDevice(device, index) {
   }
   const discoveredType = typeof device.discoveredType === "string" ? device.discoveredType.trim() : "";
   const lastSeen = typeof device.lastSeen === "string" ? device.lastSeen : "";
-  const password = typeof device.password === "string" && device.password.trim().length > 0 ? device.password.trim() : import_siku_constants.SIKU_DEFAULT_PASSWORD;
-  if (password.length > 8) {
-    throw new Error(`devices[${index}].password must be at most 8 characters long`);
-  }
+  const password = (0, import_siku_password_config.resolveConfiguredDevicePassword)(device, index, (0, import_siku_password_config.normalizeDevicePasswordRegistry)(passwordRegistry));
   const enabled = device.enabled === void 0 ? true : device.enabled;
   if (typeof enabled !== "boolean") {
     throw new Error(`devices[${index}].enabled must be a boolean`);

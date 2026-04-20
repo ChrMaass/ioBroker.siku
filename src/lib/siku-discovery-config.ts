@@ -1,5 +1,10 @@
 import { SIKU_DEFAULT_PASSWORD } from './siku-constants';
 import type { SikuDiscoveredDevice } from './siku-network';
+import {
+    buildDevicePasswordRegistry,
+    normalizeDevicePasswordRegistryKey,
+    type SikuDevicePasswordRegistry,
+} from './siku-password-config';
 
 /**
  * Formats the discovered type information for display in the adapter configuration.
@@ -22,7 +27,7 @@ export function formatDiscoveredType(device: Pick<SikuDiscoveredDevice, 'deviceT
 
 /**
  * Merges discovered devices into the current adapter config while preserving
- * user-managed fields like the display name, enabled flag and password.
+ * user-managed fields like the display name and enabled flag.
  * Existing configured devices that were not rediscovered stay in the list.
  *
  * @param configuredDevices - Current adapter config from `native.devices`
@@ -57,7 +62,6 @@ export function mergeDiscoveredDevicesIntoConfig(
             id: discoveredDevice.deviceId,
             host: discoveredDevice.host,
             name: `Lüfter ${discoveredDevice.deviceId.slice(-4)}`,
-            password: SIKU_DEFAULT_PASSWORD,
             enabled: true,
             discoveredType,
             lastSeen: discoveredDevice.receivedAt,
@@ -65,4 +69,34 @@ export function mergeDiscoveredDevicesIntoConfig(
     }
 
     return mergedDevices;
+}
+
+/**
+ * Builds a password registry that matches the merged discovery result.
+ *
+ * Existing credentials are preserved by device ID and newly discovered devices
+ * receive the default password so the admin UI immediately shows a complete
+ * editable registry.
+ *
+ * @param configuredDevices - Current adapter config from `native.devices`
+ * @param currentRegistry - Current `native.devicePasswords`
+ * @param mergedDevices - Already merged device rows
+ */
+export function mergeDiscoveredDevicePasswordsIntoConfig(
+    configuredDevices: ioBroker.SikuDeviceConfig[] | undefined,
+    currentRegistry: unknown,
+    mergedDevices: ioBroker.SikuDeviceConfig[],
+): SikuDevicePasswordRegistry {
+    const registry = buildDevicePasswordRegistry(configuredDevices, currentRegistry);
+
+    for (const device of mergedDevices) {
+        const normalizedId = normalizeDevicePasswordRegistryKey(device.id);
+        if (!normalizedId || registry[normalizedId]) {
+            continue;
+        }
+
+        registry[normalizedId] = SIKU_DEFAULT_PASSWORD;
+    }
+
+    return registry;
 }

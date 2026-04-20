@@ -5,7 +5,7 @@
     "timeCheckIntervalHours": "Time check every X hours",
     "timeSyncThresholdSec": "Time sync only above drift of X seconds",
     "configInfo": "Multi-device configuration and discovery actions will be added in the next development steps.",
-    "discoveryInfo": "Use the discovery button to identify SIKU masters via UDP broadcast and merge them into the device table. Existing names, passwords and enabled flags are preserved.",
+    "discoveryInfo": "Use the discovery button to identify SIKU masters via UDP broadcast and merge them into the device table. Existing names, enabled flags and device-ID based credentials are preserved.",
     "discoverDevicesAction": "Identify devices in network",
     "discoveryUpdated": "Discovery updated the device list. Please save the configuration.",
     "discoveryUnchanged": "Discovery found devices, but the configuration did not change.",
@@ -24,5 +24,7 @@
     "deviceHost": "Host/IP",
     "devicePassword": "Password",
     "deviceDiscoveredType": "Discovered type",
-    "deviceLastSeen": "Last discovery"
+    "deviceLastSeen": "Last discovery",
+    "devicePasswordsInfo": "Device passwords are stored separately in an encrypted registry keyed by device ID. If no entry exists for a device, the adapter falls back to the default password 1111.",
+    "devicePasswordsTable": "Device passwords by device ID"
 }

@@ -7,10 +7,14 @@ declare global {
             id: string;
             host: string;
             name: string;
-            password: string;
+            password?: string;
             enabled: boolean;
             discoveredType: string;
             lastSeen: string;
+        }
+
+        interface SikuDevicePasswordRegistry {
+            [deviceId: string]: string;
         }
 
         interface AdapterConfig {
@@ -19,6 +23,7 @@ declare global {
             timeCheckIntervalHours: number;
             timeSyncThresholdSec: number;
             devices: SikuDeviceConfig[];
+            devicePasswords?: SikuDevicePasswordRegistry;
         }
     }
 }

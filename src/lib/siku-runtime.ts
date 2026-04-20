@@ -1,6 +1,5 @@
 import { isIPv4 } from 'node:net';
 import {
-    SIKU_DEFAULT_PASSWORD,
     SIKU_DEVICE_ID_LENGTH,
     SIKU_PARAMETER_DEVICE_ID,
     SIKU_PARAMETER_DEVICE_TYPE,
@@ -9,6 +8,7 @@ import {
     SIKU_PARAMETER_POWER,
 } from './siku-constants';
 import { decodeAscii, decodeUnsignedLE, toHex } from './siku-protocol';
+import { normalizeDevicePasswordRegistry, resolveConfiguredDevicePassword } from './siku-password-config';
 import type { ParsedSikuPacket, SikuPacketEntry } from './siku-protocol';
 
 export interface SikuRuntimeDeviceConfig {
@@ -49,10 +49,12 @@ function getTrimmedString(value: unknown, fieldName: string): string {
  *
  * @param device - Raw device entry from the adapter config
  * @param index - Index inside `native.devices`
+ * @param passwordRegistry - Dedicated device password registry from `native.devicePasswords`
  */
 export function normalizeConfiguredDevice(
     device: Partial<ioBroker.SikuDeviceConfig> | null | undefined,
     index: number,
+    passwordRegistry: ioBroker.SikuDevicePasswordRegistry | undefined = undefined,
 ): SikuRuntimeDeviceConfig {
     if (typeof device !== 'object' || device === null) {
         throw new Error(`devices[${index}] must be an object`);
@@ -72,13 +74,7 @@ export function normalizeConfiguredDevice(
     }
     const discoveredType = typeof device.discoveredType === 'string' ? device.discoveredType.trim() : '';
     const lastSeen = typeof device.lastSeen === 'string' ? device.lastSeen : '';
-    const password =
-        typeof device.password === 'string' && device.password.trim().length > 0
-            ? device.password.trim()
-            : SIKU_DEFAULT_PASSWORD;
-    if (password.length > 8) {
-        throw new Error(`devices[${index}].password must be at most 8 characters long`);
-    }
+    const password = resolveConfiguredDevicePassword(device, index, normalizeDevicePasswordRegistry(passwordRegistry));
 
     const enabled = device.enabled === undefined ? true : device.enabled;
     if (typeof enabled !== 'boolean') {

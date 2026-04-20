@@ -11,18 +11,20 @@ describe('SIKU runtime helpers', () => {
                     id: '001800354353530b',
                     host: '192.168.55.46',
                     name: '  Gästezimmer  ',
-                    password: '',
                     enabled: true,
                     discoveredType: ' 014 ',
                     lastSeen: '2026-04-17T01:00:00.000Z',
                 },
                 0,
+                {
+                    '001800354353530B': '1234',
+                },
             ),
         ).to.deep.equal({
             id: '001800354353530B',
             host: '192.168.55.46',
             name: 'Gästezimmer',
-            password: '1111',
+            password: '1234',
             enabled: true,
             discoveredType: '014',
             lastSeen: '2026-04-17T01:00:00.000Z',
@@ -76,11 +78,13 @@ describe('SIKU runtime helpers', () => {
                 {
                     id: '001800354353530B',
                     host: '192.168.55.46',
-                    password: '123456789',
                 },
                 0,
+                {
+                    '001800354353530B': '123456789',
+                },
             ),
-        ).to.throw('devices[0].password must be at most 8 characters long');
+        ).to.throw('devicePasswords.001800354353530B must be at most 8 characters long');
     });
 
     it('decodes IPv4 values when the payload length is correct', () => {
