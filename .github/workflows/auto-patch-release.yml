@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Check out the tested main commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
