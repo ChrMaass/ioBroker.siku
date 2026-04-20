@@ -22,6 +22,7 @@ __export(siku_password_config_exports, {
   normalizeDevicePasswordRegistry: () => normalizeDevicePasswordRegistry,
   normalizeDevicePasswordRegistryKey: () => normalizeDevicePasswordRegistryKey,
   resolveConfiguredDevicePassword: () => resolveConfiguredDevicePassword,
+  serializeDevicePasswordRegistry: () => serializeDevicePasswordRegistry,
   stripLegacyPasswordsFromDevices: () => stripLegacyPasswordsFromDevices
 });
 module.exports = __toCommonJS(siku_password_config_exports);
@@ -47,7 +48,22 @@ function getTrimmedPasswordValue(value) {
   return null;
 }
 function normalizeDevicePasswordRegistry(registry) {
-  if (typeof registry !== "object" || registry === null || Array.isArray(registry)) {
+  if (Array.isArray(registry)) {
+    const normalized2 = {};
+    for (const entry of registry) {
+      if (typeof entry !== "object" || entry === null) {
+        continue;
+      }
+      const key = normalizeDevicePasswordRegistryKey(entry.id);
+      const password = getTrimmedPasswordValue(entry.password);
+      if (!key || !password) {
+        continue;
+      }
+      normalized2[key] = password;
+    }
+    return normalized2;
+  }
+  if (typeof registry !== "object" || registry === null) {
     return {};
   }
   const normalized = {};
@@ -60,6 +76,9 @@ function normalizeDevicePasswordRegistry(registry) {
     normalized[key] = password;
   }
   return normalized;
+}
+function serializeDevicePasswordRegistry(registry) {
+  return Object.entries(registry).sort(([leftId], [rightId]) => leftId.localeCompare(rightId)).map(([id, password]) => ({ id, password }));
 }
 function resolveConfiguredDevicePassword(device, index, registry) {
   var _a;
@@ -104,6 +123,7 @@ function stripLegacyPasswordsFromDevices(devices) {
   normalizeDevicePasswordRegistry,
   normalizeDevicePasswordRegistryKey,
   resolveConfiguredDevicePassword,
+  serializeDevicePasswordRegistry,
   stripLegacyPasswordsFromDevices
 });
 //# sourceMappingURL=siku-password-config.js.map

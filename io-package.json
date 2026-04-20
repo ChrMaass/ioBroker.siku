@@ -4,43 +4,17 @@
     "version": "0.1.4",
     "news": {
       "0.1.4": {
-        "en": "Adjusted the GitHub release workflow so npm Trusted Publishing prefers the GitHub OIDC identity instead of token-based npm auth",
-        "de": "Den GitHub-Release-Workflow so angepasst, dass npm Trusted Publishing die GitHub-OIDC-Identität statt tokenbasierter npm-Authentifizierung bevorzugt",
-        "ru": "Скорректирован GitHub release workflow, чтобы npm Trusted Publishing предпочитал GitHub OIDC вместо токен-авторизации npm",
-        "pt": "Ajustado o fluxo de release do GitHub para que o npm Trusted Publishing prefira a identidade OIDC do GitHub em vez da autenticação por token do npm",
-        "nl": "De GitHub-releaseworkflow aangepast zodat npm Trusted Publishing de GitHub-OIDC-identiteit verkiest boven tokengebaseerde npm-authenticatie",
-        "fr": "Ajustement du workflow de publication GitHub afin que npm Trusted Publishing privilégie l’identité OIDC GitHub au lieu de l’authentification npm par jeton",
-        "it": "Adeguato il workflow di release GitHub affinché npm Trusted Publishing privilegi l’identità OIDC di GitHub invece dell’autenticazione npm basata su token",
-        "es": "Se ajustó el flujo de publicación de GitHub para que npm Trusted Publishing prefiera la identidad OIDC de GitHub en lugar de la autenticación npm basada en token",
-        "pl": "Dostosowano workflow wydań GitHub tak, aby npm Trusted Publishing preferował tożsamość GitHub OIDC zamiast uwierzytelniania npm tokenem",
-        "uk": "Скориговано GitHub release workflow так, щоб npm Trusted Publishing надавав перевагу GitHub OIDC замість токен-автентифікації npm",
-        "zh-cn": "已调整 GitHub 发布工作流，使 npm Trusted Publishing 优先使用 GitHub OIDC 身份而不是基于令牌的 npm 身份验证"
-      },
-      "0.1.3": {
-        "en": "Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility",
-        "de": "Die Metadaten der GitHub-Repository-URL für die Kompatibilität mit npm Trusted Publishing normalisiert",
-        "ru": "Нормализованы метаданные URL GitHub-репозитория для совместимости с npm Trusted Publishing",
-        "pt": "Normalizados os metadados da URL do repositório GitHub para compatibilidade com o npm Trusted Publishing",
-        "nl": "De metadata van de GitHub-repository-URL genormaliseerd voor compatibiliteit met npm Trusted Publishing",
-        "fr": "Métadonnées de l’URL du dépôt GitHub normalisées pour la compatibilité avec npm Trusted Publishing",
-        "it": "Normalizzati i metadati dell’URL del repository GitHub per la compatibilità con npm Trusted Publishing",
-        "es": "Se normalizaron los metadatos de la URL del repositorio de GitHub para la compatibilidad con npm Trusted Publishing",
-        "pl": "Znormalizowano metadane adresu URL repozytorium GitHub pod kątem zgodności z npm Trusted Publishing",
-        "uk": "Нормалізовано метадані URL GitHub-репозиторію для сумісності з npm Trusted Publishing",
-        "zh-cn": "已规范 GitHub 仓库 URL 元数据，以兼容 npm Trusted Publishing"
-      },
-      "0.1.2": {
-        "en": "Added automated npm publishing from GitHub Actions and automatic GitHub release notes",
-        "de": "Automatische npm-Veröffentlichung aus GitHub Actions und automatische GitHub-Release-Notes hinzugefügt",
-        "ru": "Добавлена автоматическая публикация в npm из GitHub Actions и автоматические заметки к релизам GitHub",
-        "pt": "Adicionada publicação automática no npm a partir do GitHub Actions e notas de versão automáticas no GitHub",
-        "nl": "Automatisch publiceren naar npm vanuit GitHub Actions en automatische GitHub-release-opmerkingen toegevoegd",
-        "fr": "Ajout de la publication automatique sur npm depuis GitHub Actions et des notes de version GitHub automatiques",
-        "it": "Aggiunta la pubblicazione automatica su npm da GitHub Actions e le note di rilascio automatiche di GitHub",
-        "es": "Se añadió la publicación automática en npm desde GitHub Actions y las notas de versión automáticas de GitHub",
-        "pl": "Dodano automatyczne publikowanie do npm z GitHub Actions oraz automatyczne notatki wydań GitHub",
-        "uk": "Додано автоматичну публікацію в npm з GitHub Actions і автоматичні примітки до релізів GitHub",
-        "zh-cn": "已添加从 GitHub Actions 自动发布到 npm 以及自动生成 GitHub 发布说明"
+        "en": "Prepared the 0.1.4 release with the cleaned password registry, object-structure review artifacts and an ioBroker-compliant release workflow",
+        "de": "Den Release 0.1.4 mit bereinigter Passwort-Registry, Objektstruktur-Artefakten für das Review und einem ioBroker-konformen Release-Workflow vorbereitet",
+        "ru": "Подготовлен релиз 0.1.4 с очищенным реестром паролей, артефактами структуры объектов для ревью и workflow релиза по стандарту ioBroker",
+        "pt": "Preparada a versão 0.1.4 com o registro de senhas reorganizado, artefatos da estrutura de objetos para revisão e um workflow de release compatível com o ioBroker",
+        "nl": "Release 0.1.4 voorbereid met opgeschoonde wachtwoordregistry, objectstructuur-artefacten voor de review en een ioBroker-conforme releaseworkflow",
+        "fr": "Préparation de la version 0.1.4 avec un registre des mots de passe nettoyé, des artefacts de structure d’objets pour la revue et un workflow de release conforme à ioBroker",
+        "it": "Preparata la versione 0.1.4 con il registro password ripulito, gli artefatti della struttura oggetti per la review e un workflow di release conforme a ioBroker",
+        "es": "Preparada la versión 0.1.4 con el registro de contraseñas depurado, artefactos de estructura de objetos para la revisión y un flujo de publicación conforme a ioBroker",
+        "pl": "Przygotowano wydanie 0.1.4 z uporządkowanym rejestrem haseł, artefaktami struktury obiektów do przeglądu i workflow wydawniczym zgodnym z ioBroker",
+        "uk": "Підготовлено реліз 0.1.4 з очищеним реєстром паролів, артефактами структури об’єктів для рев’ю та workflow релізу відповідно до стандартів ioBroker",
+        "zh-cn": "已为 0.1.4 版本做好准备，包括清理后的密码注册表、用于审核的对象结构产物以及符合 ioBroker 标准的发布工作流"
       },
       "0.1.1": {
         "en": "Adapter-check metadata cleanup for latest intake and npm publication follow-up",
@@ -134,7 +108,8 @@
       {
         "admin": ">=7.6.20"
       }
-    ]
+    ],
+    "title": "SIKU ventilation"
   },
   "native": {
     "pollIntervalSec": 30,
@@ -142,7 +117,7 @@
     "timeCheckIntervalHours": 24,
     "timeSyncThresholdSec": 10,
     "devices": [],
-    "devicePasswords": {}
+    "devicePasswords": []
   },
   "objects": [],
   "instanceObjects": [

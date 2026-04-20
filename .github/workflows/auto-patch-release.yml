@@ -122,7 +122,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
-          gh workflow run test-and-release.yml \
-            --ref "$RELEASE_TAG" \
-            -f release_tag="$RELEASE_TAG" \
-            -f publish_only=true
+          gh workflow run test-and-release.yml --ref "$RELEASE_TAG"

@@ -1,6 +1,7 @@
 import { SIKU_DEFAULT_PASSWORD, SIKU_DEVICE_ID_LENGTH } from './siku-constants';
 
 export type SikuDevicePasswordRegistry = Record<string, string>;
+export type SikuDevicePasswordEntries = ioBroker.SikuDevicePasswordEntry[];
 
 /**
  * Normalizes a device ID that is intended to be used as a key in the password registry.
@@ -50,7 +51,27 @@ function getTrimmedPasswordValue(value: unknown): string | null {
  * @param registry - Raw `native.devicePasswords` value
  */
 export function normalizeDevicePasswordRegistry(registry: unknown): SikuDevicePasswordRegistry {
-    if (typeof registry !== 'object' || registry === null || Array.isArray(registry)) {
+    if (Array.isArray(registry)) {
+        const normalized: SikuDevicePasswordRegistry = {};
+
+        for (const entry of registry) {
+            if (typeof entry !== 'object' || entry === null) {
+                continue;
+            }
+
+            const key = normalizeDevicePasswordRegistryKey((entry as { id?: unknown }).id);
+            const password = getTrimmedPasswordValue((entry as { password?: unknown }).password);
+            if (!key || !password) {
+                continue;
+            }
+
+            normalized[key] = password;
+        }
+
+        return normalized;
+    }
+
+    if (typeof registry !== 'object' || registry === null) {
         return {};
     }
 
@@ -66,6 +87,18 @@ export function normalizeDevicePasswordRegistry(registry: unknown): SikuDevicePa
     }
 
     return normalized;
+}
+
+/**
+ * Converts the normalized password registry into the schema-compliant JSON-config
+ * table format that stores one row per device id.
+ *
+ * @param registry - Normalized password registry keyed by device id
+ */
+export function serializeDevicePasswordRegistry(registry: SikuDevicePasswordRegistry): SikuDevicePasswordEntries {
+    return Object.entries(registry)
+        .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+        .map(([id, password]) => ({ id, password }));
 }
 
 /**

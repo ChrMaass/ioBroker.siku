@@ -17,13 +17,18 @@ declare global {
             [deviceId: string]: string;
         }
 
+        interface SikuDevicePasswordEntry {
+            id: string;
+            password: string;
+        }
+
         interface AdapterConfig {
             pollIntervalSec: number;
             discoveryBroadcastAddress: string;
             timeCheckIntervalHours: number;
             timeSyncThresholdSec: number;
             devices: SikuDeviceConfig[];
-            devicePasswords?: SikuDevicePasswordRegistry;
+            devicePasswords?: SikuDevicePasswordEntry[] | SikuDevicePasswordRegistry;
         }
     }
 }
