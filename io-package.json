@@ -108,8 +108,7 @@
       {
         "admin": ">=7.6.20"
       }
-    ],
-    "title": "SIKU ventilation"
+    ]
   },
   "native": {
     "pollIntervalSec": 30,
