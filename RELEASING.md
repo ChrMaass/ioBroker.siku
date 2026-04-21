@@ -100,4 +100,10 @@ Add the adapter to the ioBroker `latest` repository using one of these paths:
 - via `iobroker.dev` → manage → **ADD TO LATEST**
 - or by PR against `ioBroker/ioBroker.repositories`
 
+Important review workflow note for `ioBroker/ioBroker.repositories` PRs:
+
+- post `RE-CHECK!` **as a standalone comment with no extra text**
+- add explanatory context in a separate comment if needed
+- the bot removes the trigger comment automatically after the checker run has been processed
+
 Once the adapter has real user feedback and enough validation, it can later be proposed for `stable`.
