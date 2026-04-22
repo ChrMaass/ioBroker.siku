@@ -1,7 +1,7 @@
 {
   "name": "iobroker.siku",
   "version": "0.1.4",
-  "description": "ioBroker adapter for SIKU RV V2 ventilation devices",
+  "description": "ioBroker adapter for SIKU RV V2 and compatible Oxxify smart 50 ventilation devices",
   "author": {
     "name": "Christian Maaß",
     "email": "christian@maass.it"
@@ -15,7 +15,11 @@
     "ventilation",
     "fan",
     "udp",
-    "rv v2"
+    "rv v2",
+    "oxxify",
+    "smart 50",
+    "heat recovery",
+    "decentralized ventilation"
   ],
   "repository": {
     "type": "git",
