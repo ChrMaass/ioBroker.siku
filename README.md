@@ -13,7 +13,7 @@
 
 ## Overview
 
-This adapter integrates **SIKU RV V2** residential ventilation devices into ioBroker.
+This adapter integrates **SIKU RV V2** residential ventilation devices and compatible units from the **Oxxify smart** series into ioBroker. This wording explicitly includes devices marketed as **Oxxify.smart 30**, **Oxxify.smart 50** and **Oxxify.smart 50 K**.
 
 The current repository state targets a feature-complete **public beta** for local-network operation and the official ioBroker `latest` intake.
 
@@ -58,7 +58,9 @@ The current repository state targets a feature-complete **public beta** for loca
 
 ## Device references
 
-The adapter is built for the SIKU RV V2 family such as **SIKU RV 50 W Pro WiFi V2** and related devices in the same protocol family.
+The adapter is built for the SIKU RV V2 family such as **SIKU RV 50 W Pro WiFi V2**, compatible units from the **Oxxify smart** series and related devices in the same protocol family.
+
+Current compatibility wording and search terms explicitly cover **Oxxify.smart 30**, **Oxxify.smart 50**, **Oxxify.smart 50 K**, **Oxxify smart**, **Oxxify smart 30**, **Oxxify smart 50**, **Oxxify smart 50 K** and compatible app-controlled decentralized heat-recovery ventilation units.
 
 - Manufacturer product page: [SIKU RV 50 W Pro WiFi V2](https://www.siku.at/SIKU-RV-50-W-Pro-WiFi-V2/50523)
 - Manufacturer overview: [SIKU products](https://www.siku.at/en/products/)
@@ -104,6 +106,8 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 ### **WORK IN PROGRESS**
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+
+- Documented compatibility wording and search terms for the compatible Oxxify smart device series
 
 ### 0.1.4 (2026-04-18)
 
