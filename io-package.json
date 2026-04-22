@@ -57,17 +57,17 @@
       "zh-cn": "SIKU / Oxxify 通风"
     },
     "desc": {
-      "en": "ioBroker adapter for SIKU RV V2 and compatible Oxxify smart 50 ventilation devices",
-      "de": "ioBroker-Adapter für SIKU-RV-V2- und kompatible Oxxify smart 50-Lüftungsgeräte",
-      "ru": "Адаптер ioBroker для вентиляционных устройств SIKU RV V2 и совместимых Oxxify smart 50",
-      "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2 e compatíveis Oxxify smart 50",
-      "nl": "ioBroker-adapter voor SIKU RV V2- en compatibele Oxxify smart 50-ventilatieapparaten",
-      "fr": "Adaptateur ioBroker pour les appareils de ventilation SIKU RV V2 et Oxxify smart 50 compatibles",
-      "it": "Adattatore ioBroker per dispositivi di ventilazione SIKU RV V2 e Oxxify smart 50 compatibili",
-      "es": "Adaptador ioBroker para dispositivos de ventilación SIKU RV V2 y Oxxify smart 50 compatibles",
-      "pl": "Adapter ioBroker do urządzeń wentylacyjnych SIKU RV V2 i kompatybilnych Oxxify smart 50",
-      "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2 і сумісних Oxxify smart 50",
-      "zh-cn": "用于 SIKU RV V2 和兼容 Oxxify smart 50 通风设备的 ioBroker 适配器"
+      "en": "ioBroker adapter for SIKU RV V2 and compatible Oxxify smart series ventilation devices",
+      "de": "ioBroker-Adapter für SIKU-RV-V2- und kompatible Oxxify-smart-Lüftungsgeräte der Smart-Reihe",
+      "ru": "Адаптер ioBroker для вентиляционных устройств SIKU RV V2 и совместимой серии Oxxify smart",
+      "pt": "Adaptador ioBroker para dispositivos de ventilação SIKU RV V2 e série compatível Oxxify smart",
+      "nl": "ioBroker-adapter voor SIKU RV V2- en compatibele Oxxify smart-serie ventilatieapparaten",
+      "fr": "Adaptateur ioBroker pour les appareils de ventilation SIKU RV V2 et la série compatible Oxxify smart",
+      "it": "Adattatore ioBroker per dispositivi di ventilazione SIKU RV V2 e serie compatibile Oxxify smart",
+      "es": "Adaptador ioBroker para dispositivos de ventilación SIKU RV V2 y la serie compatible Oxxify smart",
+      "pl": "Adapter ioBroker do urządzeń wentylacyjnych SIKU RV V2 i kompatybilnej serii Oxxify smart",
+      "uk": "Адаптер ioBroker для вентиляційних пристроїв SIKU RV V2 і сумісної серії Oxxify smart",
+      "zh-cn": "用于 SIKU RV V2 和兼容 Oxxify smart 系列通风设备的 ioBroker 适配器"
     },
     "authors": [
       "Christian Maaß <christian@maass.it>"
@@ -83,7 +83,13 @@
       "heat recovery",
       "decentralized ventilation",
       "oxxify.smart",
-      "oxxify smart"
+      "oxxify smart",
+      "smart series",
+      "smart 30",
+      "smart 50 k",
+      "oxxify smart 30",
+      "oxxify smart 50",
+      "oxxify smart 50 k"
     ],
     "licenseInformation": {
       "type": "free",
