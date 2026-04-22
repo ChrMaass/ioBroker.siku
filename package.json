@@ -19,7 +19,9 @@
     "oxxify",
     "smart 50",
     "heat recovery",
-    "decentralized ventilation"
+    "decentralized ventilation",
+    "oxxify.smart",
+    "oxxify smart"
   ],
   "repository": {
     "type": "git",
