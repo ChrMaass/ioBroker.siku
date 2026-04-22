@@ -101,10 +101,10 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 ## Changelog
 
-<!--
-    Placeholder for the next version (at the beginning of the line):
-    ### **WORK IN PROGRESS**
--->
+### **WORK IN PROGRESS**
+
+<!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+
 ### 0.1.4 (2026-04-18)
 
 - Hardened the GitHub release workflow so npm Trusted Publishing prefers GitHub OIDC over token-based npm auth
