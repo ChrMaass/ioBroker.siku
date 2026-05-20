@@ -270,7 +270,7 @@ export function parsePacket(packet: Buffer): ParsedSikuPacket {
         throw new Error('Packet is truncated before the function code');
     }
 
-    const baseFunctionCode = packet[position++] as SikuFunction;
+    const baseFunctionCode = packet[position++];
     let currentFunctionCode = baseFunctionCode;
     let currentPage = 0;
     const entries: SikuPacketEntry[] = [];
@@ -286,7 +286,7 @@ export function parsePacket(packet: Buffer): ParsedSikuPacket {
 
         if (marker === SIKU_SPECIAL_COMMANDS.changeFunction) {
             ensureBytesAvailable(2, 'a function-change marker');
-            currentFunctionCode = packet[position + 1] as SikuFunction;
+            currentFunctionCode = packet[position + 1];
             position += 2;
             continue;
         }
