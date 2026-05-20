@@ -104,6 +104,7 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 ## Changelog
 
 ### **WORK IN PROGRESS**
+- (copilot) Adapter requires node.js >= 22 now
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 
