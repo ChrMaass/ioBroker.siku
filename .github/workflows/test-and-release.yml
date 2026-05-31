@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-check@v1
         with:
-          node-version: '22.x'
+          node-version: '24.x'
           type-checking: true
           lint: true
 
@@ -59,6 +59,8 @@ jobs:
             os: ubuntu-latest
           - node-version: 22.x
             os: macos-latest
+          - node-version: 22.x
+            os: windows-latest
 
     steps:
       - uses: ioBroker/testing-action-adapter@v1
@@ -82,7 +84,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: ioBroker/testing-action-deploy@v1.4.3
+      - uses: ioBroker/testing-action-deploy@v1
         with:
           node-version: '24.x'
           github-token: ${{ secrets.GITHUB_TOKEN }}

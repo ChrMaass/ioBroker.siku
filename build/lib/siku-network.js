@@ -104,11 +104,9 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
   const socket = await bindRequestSocket(localPort);
   return new Promise((resolve, reject) => {
     let finished = false;
-    let timeoutHandle;
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
     const cleanup = () => {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
+      timeoutSignal.removeEventListener("abort", onTimeout);
       socket.removeAllListeners();
       socket.close();
     };
@@ -126,6 +124,10 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
         reject(new Error("No response received"));
       }
     };
+    function onTimeout() {
+      finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
+    }
+    timeoutSignal.addEventListener("abort", onTimeout, { once: true });
     socket.on("error", finish);
     socket.on("message", (message, remoteInfo) => {
       if (remoteInfo.address === host && remoteInfo.port === port) {
@@ -135,23 +137,19 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
     socket.send(payload, port, host, (error) => {
       if (error) {
         finish(error);
-        return;
       }
-      timeoutHandle = setTimeout(() => {
-        finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
-      }, timeoutMs);
     });
   });
 }
 async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, dependencies) {
   var _a, _b;
   const request = (_a = dependencies.requestOnce) != null ? _a : requestOnce;
-  const wait = (_b = dependencies.delay) != null ? _b : import_promises.setTimeout;
+  const timer = (_b = dependencies.timer) != null ? _b : import_promises.setTimeout;
   let lastError;
   for (const retryDelay of retryDelaysMs) {
     try {
       if (retryDelay > 0) {
-        await wait(retryDelay);
+        await timer(retryDelay);
       }
       const response = await request(host, port, payload, timeoutMs, localPort);
       const parsed = (0, import_siku_protocol.parsePacket)(response);
@@ -265,7 +263,7 @@ async function writeDevicePacket(options, dependencies = {}) {
 async function discoverDevices(options, dependencies = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
   const bind = (_a = dependencies.bindSocketWithFallback) != null ? _a : bindSocketWithFallback;
-  const wait = (_b = dependencies.delay) != null ? _b : import_promises.setTimeout;
+  const timer = (_b = dependencies.timer) != null ? _b : import_promises.setTimeout;
   const now = (_c = dependencies.now) != null ? _c : (() => /* @__PURE__ */ new Date());
   const localAddresses = ((_d = dependencies.getLocalIPv4Addresses) != null ? _d : getLocalIPv4Addresses)();
   const socket = await bind((_e = options.preferredBindPort) != null ? _e : import_siku_constants.SIKU_DEFAULT_PORT);
@@ -295,7 +293,7 @@ async function discoverDevices(options, dependencies = {}) {
         (error) => error ? reject(error) : resolve()
       );
     });
-    await wait((_g = options.timeoutMs) != null ? _g : import_siku_constants.SIKU_DISCOVERY_TIMEOUT_MS);
+    await timer((_g = options.timeoutMs) != null ? _g : import_siku_constants.SIKU_DISCOVERY_TIMEOUT_MS);
     return Array.from(devices.values()).sort((left, right) => left.deviceId.localeCompare(right.deviceId));
   } finally {
     socket.close();

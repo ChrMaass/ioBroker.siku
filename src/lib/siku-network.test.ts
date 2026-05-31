@@ -140,7 +140,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 bindSocketWithFallback: () => Promise.resolve(fakeSocket),
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
                 getLocalIPv4Addresses: () => new Set(['192.168.55.51']),
                 now: () => new Date('2026-04-17T00:00:00.000Z'),
             },
@@ -184,7 +184,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 requestOnce: () => Promise.resolve(attemptResponses[callCount++]),
-                delay: timeoutMs => {
+                timer: timeoutMs => {
                     waitCalls.push(timeoutMs);
                     return Promise.resolve();
                 },
@@ -228,7 +228,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 requestOnce: () => Promise.resolve(attemptResponses[callCount++]),
-                delay: timeoutMs => {
+                timer: timeoutMs => {
                     waitCalls.push(timeoutMs);
                     return Promise.resolve();
                 },
@@ -264,7 +264,7 @@ describe('SIKU network helpers', () => {
                         ),
                     );
                 },
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -288,7 +288,7 @@ describe('SIKU network helpers', () => {
                         ),
                     );
                 },
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -316,7 +316,7 @@ describe('SIKU network helpers', () => {
                             Buffer.from([0xfe, 0x03, 0x6f, 0x03, 0x04, 0x05, 0xfe, 0x04, 0x70, 0x11, 0x05, 0x04, 0x1a]),
                         ),
                     ),
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -345,7 +345,7 @@ describe('SIKU network helpers', () => {
                                 Buffer.from([0xfe, 0x03, 0x6f, 0x04, 0x04, 0x05]),
                             ),
                         ),
-                    delay: () => Promise.resolve(),
+                    timer: () => Promise.resolve(),
                 },
             );
         } catch (error) {
@@ -371,7 +371,7 @@ describe('SIKU network helpers', () => {
                 },
                 {
                     requestOnce: () => Promise.reject(errors[callCount++]),
-                    delay: timeoutMs => {
+                    timer: timeoutMs => {
                         waitCalls.push(timeoutMs);
                         return Promise.resolve();
                     },

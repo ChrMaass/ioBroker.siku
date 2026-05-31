@@ -1,7 +1,7 @@
 import dgram from 'node:dgram';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces } from 'node:os';
-import { setTimeout as delay } from 'node:timers/promises';
+import { setTimeout as nodeTimer } from 'node:timers/promises';
 import {
     SIKU_DEFAULT_PASSWORD,
     SIKU_DEFAULT_PORT,
@@ -79,7 +79,7 @@ export interface SikuNetworkDependencies {
         timeoutMs: number,
         localPort: number,
     ) => Promise<Buffer>;
-    delay?: (timeoutMs: number) => Promise<unknown>;
+    timer?: (timeoutMs: number) => Promise<unknown>;
     getLocalIPv4Addresses?: () => Set<string>;
     now?: () => Date;
 }
@@ -167,12 +167,10 @@ async function requestOnce(
 
     return new Promise<Buffer>((resolve, reject) => {
         let finished = false;
-        let timeoutHandle: NodeJS.Timeout | undefined;
+        const timeoutSignal = AbortSignal.timeout(timeoutMs);
 
         const cleanup = (): void => {
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
-            }
+            timeoutSignal.removeEventListener('abort', onTimeout);
             socket.removeAllListeners();
             socket.close();
         };
@@ -192,6 +190,11 @@ async function requestOnce(
             }
         };
 
+        function onTimeout(): void {
+            finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
+        }
+
+        timeoutSignal.addEventListener('abort', onTimeout, { once: true });
         socket.on('error', finish);
         socket.on('message', (message, remoteInfo) => {
             if (remoteInfo.address === host && remoteInfo.port === port) {
@@ -201,11 +204,7 @@ async function requestOnce(
         socket.send(payload, port, host, error => {
             if (error) {
                 finish(error);
-                return;
             }
-            timeoutHandle = setTimeout(() => {
-                finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
-            }, timeoutMs);
         });
     });
 }
@@ -220,13 +219,13 @@ async function executeRequestWithRetries(
     dependencies: SikuNetworkDependencies,
 ): Promise<ParsedSikuPacket> {
     const request = dependencies.requestOnce ?? requestOnce;
-    const wait = dependencies.delay ?? delay;
+    const timer = dependencies.timer ?? nodeTimer;
     let lastError: Error | undefined;
 
     for (const retryDelay of retryDelaysMs) {
         try {
             if (retryDelay > 0) {
-                await wait(retryDelay);
+                await timer(retryDelay);
             }
 
             const response = await request(host, port, payload, timeoutMs, localPort);
@@ -402,7 +401,7 @@ export async function discoverDevices(
     dependencies: SikuNetworkDependencies = {},
 ): Promise<SikuDiscoveredDevice[]> {
     const bind = dependencies.bindSocketWithFallback ?? bindSocketWithFallback;
-    const wait = dependencies.delay ?? delay;
+    const timer = dependencies.timer ?? nodeTimer;
     const now = dependencies.now ?? (() => new Date());
     const localAddresses = (dependencies.getLocalIPv4Addresses ?? getLocalIPv4Addresses)();
     const socket = await bind(options.preferredBindPort ?? SIKU_DEFAULT_PORT);
@@ -435,7 +434,7 @@ export async function discoverDevices(
             );
         });
 
-        await wait(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS);
+        await timer(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS);
         return Array.from(devices.values()).sort((left, right) => left.deviceId.localeCompare(right.deviceId));
     } finally {
         socket.close();
