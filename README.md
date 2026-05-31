@@ -103,12 +103,14 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 ## Changelog
 
-### **WORK IN PROGRESS**
-- (copilot) Adapter requires node.js >= 22 now
+### 0.1.5 (2026-05-31)
+
+- Addressed the latest ioBroker repository checker findings for `latest` intake.
+- Added Windows to the release-relevant adapter test matrix and updated CI/CD documentation.
+- Updated admin translations, js-controller minimum version and ioBroker type definitions.
+- Hardened UDP timeout handling and added timeout cleanup test coverage.
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-
-- Documented compatibility wording and search terms for the compatible Oxxify smart device series
 
 ### 0.1.4 (2026-04-18)
 
@@ -129,20 +131,6 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Cleaned up adapter-check metadata for the `latest` intake and npm follow-up release
 - Removed deprecated `common.title` usage and trimmed io-package keywords
 - Simplified the io-package news list to published npm versions only
-
-### 0.1.0 (2026-04-17)
-
-- First public beta with ioBroker publication hardening, encrypted device passwords and streamlined CI
-- Added protected/encrypted native device password handling for JSON-config table rows
-- Split slow Windows adapter tests into a dedicated regression workflow
-- Improved publication metadata, title handling and patch-version release preparation
-
-Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
-
-### 0.0.1 (2026-04-17)
-
-- Initial beta with discovery, multi-device runtime, time checks and schedule support
-- Added localized mode enums, local timestamp companion states and timer countdown visibility
 
 ## License
 

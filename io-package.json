@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "news": {
+      "0.1.5": {
+        "en": "Addressed ioBroker repository checker findings, updated CI matrix and translations, and hardened UDP timeout handling.",
+        "de": "ioBroker-Repository-Checker-Hinweise behoben, CI-Matrix und Übersetzungen aktualisiert sowie UDP-Timeout-Handling gehärtet.",
+        "ru": "Исправлены замечания ioBroker Repository Checker, обновлены CI-матрица и переводы, улучшена обработка UDP-тайм-аутов.",
+        "pt": "Corrigidos avisos do ioBroker Repository Checker, atualizadas a matriz de CI e traduções, e reforçado o tratamento de timeouts UDP.",
+        "nl": "ioBroker Repository Checker-meldingen opgelost, CI-matrix en vertalingen bijgewerkt en UDP-timeoutafhandeling verbeterd.",
+        "fr": "Corrections des remarques du ioBroker Repository Checker, mise à jour de la matrice CI et des traductions, et durcissement des timeouts UDP.",
+        "it": "Risolti i rilievi di ioBroker Repository Checker, aggiornate matrice CI e traduzioni, e rafforzata la gestione dei timeout UDP.",
+        "es": "Corregidas las observaciones de ioBroker Repository Checker, actualizadas la matriz CI y las traducciones, y reforzado el manejo de timeouts UDP.",
+        "pl": "Usunięto uwagi ioBroker Repository Checker, zaktualizowano macierz CI i tłumaczenia oraz wzmocniono obsługę timeoutów UDP.",
+        "uk": "Виправлено зауваження ioBroker Repository Checker, оновлено CI-матрицю й переклади та посилено обробку UDP-тайм-аутів.",
+        "zh-cn": "修复 ioBroker Repository Checker 提示，更新 CI 矩阵和翻译，并强化 UDP 超时处理。"
+      },
       "0.1.4": {
         "en": "Prepared the 0.1.4 release with the cleaned password registry, object-structure review artifacts and an ioBroker-compliant release workflow",
         "de": "Den Release 0.1.4 mit bereinigter Passwort-Registry, Objektstruktur-Artefakten für das Review und einem ioBroker-konformen Release-Workflow vorbereitet",
