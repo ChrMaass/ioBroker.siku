@@ -46,6 +46,20 @@ class FakeDiscoverySocket extends EventEmitter {
     }
 }
 
+class FakeUnresponsiveRequestSocket extends EventEmitter {
+    public readonly sentPackets: Array<{ payload: Buffer; port: number; address: string }> = [];
+    public closed = false;
+
+    public send(buffer: Buffer, port: number, address: string, callback: (error: Error | null) => void): void {
+        this.sentPackets.push({ payload: Buffer.from(buffer), port, address });
+        callback(null);
+    }
+
+    public close(): void {
+        this.closed = true;
+    }
+}
+
 describe('SIKU network helpers', () => {
     const discoveryResponseHex =
         'FDFD0210303031383030333534333533353330420006FE02B90E00FE107C30303138303033353433353335333042DD09';
@@ -140,7 +154,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 bindSocketWithFallback: () => Promise.resolve(fakeSocket),
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
                 getLocalIPv4Addresses: () => new Set(['192.168.55.51']),
                 now: () => new Date('2026-04-17T00:00:00.000Z'),
             },
@@ -184,7 +198,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 requestOnce: () => Promise.resolve(attemptResponses[callCount++]),
-                delay: timeoutMs => {
+                timer: timeoutMs => {
                     waitCalls.push(timeoutMs);
                     return Promise.resolve();
                 },
@@ -228,7 +242,7 @@ describe('SIKU network helpers', () => {
             },
             {
                 requestOnce: () => Promise.resolve(attemptResponses[callCount++]),
-                delay: timeoutMs => {
+                timer: timeoutMs => {
                     waitCalls.push(timeoutMs);
                     return Promise.resolve();
                 },
@@ -239,6 +253,35 @@ describe('SIKU network helpers', () => {
         expect(waitCalls).to.deep.equal([200]);
         expect(packet.checksumValid).to.equal(true);
         expect(packet.functionCode).to.equal(SikuFunction.Response);
+    });
+
+    it('rejects unanswered UDP requests after the configured timeout and cleans up the socket', async () => {
+        const fakeSocket = new FakeUnresponsiveRequestSocket();
+        let thrownError: Error | undefined;
+
+        try {
+            await readDevicePacket(
+                {
+                    host: '127.0.0.1',
+                    deviceId: '001800354353530B',
+                    password: '1111',
+                    port: 4000,
+                    localPort: 0,
+                    timeoutMs: 20,
+                    retryDelaysMs: [0],
+                    parameters: [{ parameter: 0x0001 }],
+                },
+                {
+                    bindRequestSocket: () => Promise.resolve(fakeSocket),
+                },
+            );
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(fakeSocket.sentPackets).to.have.length(1);
+        expect(fakeSocket.closed).to.equal(true);
+        expect(thrownError?.message).to.equal('UDP request to 127.0.0.1:4000 timed out after 20 ms');
     });
 
     it('uses the target port as local request port by default for read and write traffic', async () => {
@@ -264,7 +307,7 @@ describe('SIKU network helpers', () => {
                         ),
                     );
                 },
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -288,7 +331,7 @@ describe('SIKU network helpers', () => {
                         ),
                     );
                 },
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -316,7 +359,7 @@ describe('SIKU network helpers', () => {
                             Buffer.from([0xfe, 0x03, 0x6f, 0x03, 0x04, 0x05, 0xfe, 0x04, 0x70, 0x11, 0x05, 0x04, 0x1a]),
                         ),
                     ),
-                delay: () => Promise.resolve(),
+                timer: () => Promise.resolve(),
             },
         );
 
@@ -345,7 +388,7 @@ describe('SIKU network helpers', () => {
                                 Buffer.from([0xfe, 0x03, 0x6f, 0x04, 0x04, 0x05]),
                             ),
                         ),
-                    delay: () => Promise.resolve(),
+                    timer: () => Promise.resolve(),
                 },
             );
         } catch (error) {
@@ -371,7 +414,7 @@ describe('SIKU network helpers', () => {
                 },
                 {
                     requestOnce: () => Promise.reject(errors[callCount++]),
-                    delay: timeoutMs => {
+                    timer: timeoutMs => {
                         waitCalls.push(timeoutMs);
                         return Promise.resolve();
                     },
