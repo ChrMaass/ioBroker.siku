@@ -70,8 +70,17 @@ interface SikuDiscoverySocket {
     address(): AddressInfo;
 }
 
+interface SikuRequestSocket {
+    on(event: 'error', listener: (error: Error) => void): this;
+    on(event: 'message', listener: (message: Buffer, remoteInfo: dgram.RemoteInfo) => void): this;
+    send(buffer: Buffer, port: number, address: string, callback: (error: Error | null) => void): void;
+    removeAllListeners(): this;
+    close(): void;
+}
+
 export interface SikuNetworkDependencies {
     bindSocketWithFallback?: (preferredPort: number) => Promise<SikuDiscoverySocket>;
+    bindRequestSocket?: (localPort: number) => Promise<SikuRequestSocket>;
     requestOnce?: (
         host: string,
         port: number,
@@ -162,8 +171,9 @@ async function requestOnce(
     payload: Buffer,
     timeoutMs: number,
     localPort: number = port,
+    bindRequest: (localPort: number) => Promise<SikuRequestSocket> = bindRequestSocket,
 ): Promise<Buffer> {
-    const socket = await bindRequestSocket(localPort);
+    const socket = await bindRequest(localPort);
 
     return new Promise<Buffer>((resolve, reject) => {
         let finished = false;
@@ -218,7 +228,17 @@ async function executeRequestWithRetries(
     retryDelaysMs: readonly number[],
     dependencies: SikuNetworkDependencies,
 ): Promise<ParsedSikuPacket> {
-    const request = dependencies.requestOnce ?? requestOnce;
+    const request =
+        dependencies.requestOnce ??
+        ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort) =>
+            requestOnce(
+                targetHost,
+                targetPort,
+                requestPayload,
+                requestTimeoutMs,
+                requestLocalPort,
+                dependencies.bindRequestSocket,
+            ));
     const timer = dependencies.timer ?? nodeTimer;
     let lastError: Error | undefined;
 

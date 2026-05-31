@@ -100,8 +100,8 @@ async function bindRequestSocket(localPort) {
   });
   return socket;
 }
-async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
-  const socket = await bindRequestSocket(localPort);
+async function requestOnce(host, port, payload, timeoutMs, localPort = port, bindRequest = bindRequestSocket) {
+  const socket = await bindRequest(localPort);
   return new Promise((resolve, reject) => {
     let finished = false;
     const timeoutSignal = AbortSignal.timeout(timeoutMs);
@@ -143,7 +143,14 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port) {
 }
 async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, dependencies) {
   var _a, _b;
-  const request = (_a = dependencies.requestOnce) != null ? _a : requestOnce;
+  const request = (_a = dependencies.requestOnce) != null ? _a : ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort) => requestOnce(
+    targetHost,
+    targetPort,
+    requestPayload,
+    requestTimeoutMs,
+    requestLocalPort,
+    dependencies.bindRequestSocket
+  ));
   const timer = (_b = dependencies.timer) != null ? _b : import_promises.setTimeout;
   let lastError;
   for (const retryDelay of retryDelaysMs) {

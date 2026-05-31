@@ -85,8 +85,8 @@ The adapter was generated with the official ioBroker tooling and is developed in
 ## CI / CD
 
 - Pull requests run a lean Ubuntu smoke test after linting and type-checking.
-- `main` runs the release-relevant Linux/macOS matrix.
-- Windows runs in a separate scheduled/manual regression workflow because the ioBroker controller bootstrap is significantly slower there.
+- `main` runs the release-relevant Linux/macOS/Windows matrix required for ioBroker repository intake.
+- A separate scheduled/manual Windows regression workflow remains available for additional checks because the ioBroker controller bootstrap is significantly slower there.
 - Patch versions can be bumped automatically on successful `main` runs via `.github/workflows/auto-patch-release.yml`.
 - Tagged releases are published to npm directly from GitHub Actions via Trusted Publishing.
 - GitHub Releases are created automatically with generated release notes; an optional Copilot summary can be prepended when the repository secret `COPILOT_GITHUB_TOKEN` is configured.
