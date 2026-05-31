@@ -132,6 +132,8 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Removed deprecated `common.title` usage and trimmed io-package keywords
 - Simplified the io-package news list to published npm versions only
 
+Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+
 ## License
 
 MIT License

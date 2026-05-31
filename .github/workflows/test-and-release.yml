@@ -52,15 +52,11 @@ jobs:
 
     strategy:
       matrix:
+        node-version: [22.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
-          - node-version: 22.x
-            os: ubuntu-latest
           - node-version: 24.x
             os: ubuntu-latest
-          - node-version: 22.x
-            os: macos-latest
-          - node-version: 22.x
-            os: windows-latest
 
     steps:
       - uses: ioBroker/testing-action-adapter@v1
