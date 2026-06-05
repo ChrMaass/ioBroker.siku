@@ -409,7 +409,7 @@ class Siku extends utils.Adapter {
      */
     private async initializeRuntimeDevices(): Promise<void> {
         await this.extendObjectAsync('devices', {
-            type: 'channel',
+            type: 'folder',
             common: {
                 name: 'Lüftungsgeräte',
             },

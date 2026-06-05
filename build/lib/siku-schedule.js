@@ -72,7 +72,7 @@ function buildScheduleStateDefinitions() {
           field: "endHour",
           common: {
             name: `${day.name} Periode ${periodNumber} - Endstunde`,
-            role: "value",
+            role: "level",
             type: "number",
             read: true,
             write: true,
@@ -89,7 +89,7 @@ function buildScheduleStateDefinitions() {
           field: "endMinute",
           common: {
             name: `${day.name} Periode ${periodNumber} - Endminute`,
-            role: "value",
+            role: "level",
             type: "number",
             read: true,
             write: true,

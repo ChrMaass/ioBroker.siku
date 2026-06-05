@@ -76,6 +76,14 @@ describe('SIKU schedule helpers', () => {
             'schedule.sunday.p4.endHour',
             'schedule.sunday.p4.endMinute',
         ]);
+        expect(getScheduleStateDefinition('schedule.sunday.p4.endHour')?.common).to.include({
+            role: 'level',
+            write: true,
+        });
+        expect(getScheduleStateDefinition('schedule.sunday.p4.endMinute')?.common).to.include({
+            role: 'level',
+            write: true,
+        });
     });
 
     it('rejects incomplete or invalid schedule snapshots early', () => {

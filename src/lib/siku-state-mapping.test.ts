@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { buildPacket, parsePacket } from './siku-protocol';
 import { SikuFunction } from './siku-constants';
 import {
+    SIKU_STATE_DEFINITIONS,
     buildWriteRequestForState,
     decodeMappedStateUpdates,
     getWritableStateDefinition,
@@ -62,6 +63,24 @@ describe('SIKU state mappings', () => {
         expect(isButtonState('diagnostics.resetAlarms')).to.equal(true);
         expect(isButtonState('control.power')).to.equal(false);
         expect(getWritableStateDefinition('control.power')?.write?.parameter).to.equal(0x0001);
+    });
+
+    it('uses writable-compatible roles for mode and setpoint states', () => {
+        const byRelativeId = new Map(SIKU_STATE_DEFINITIONS.map(definition => [definition.relativeId, definition]));
+
+        for (const relativeId of ['control.fanMode', 'control.timerMode', 'control.analogSensorSetpoint']) {
+            const definition = byRelativeId.get(relativeId);
+            expect(definition?.common).to.include({ role: 'level', write: true });
+        }
+
+        for (const relativeId of [
+            'control.boostOverrunMinutes',
+            'timers.nightModeSetpointMinutes',
+            'timers.partyModeSetpointMinutes',
+        ]) {
+            const definition = byRelativeId.get(relativeId);
+            expect(definition?.common).to.include({ role: 'level.timer', write: true });
+        }
     });
 
     it('rejects invalid write values early', () => {

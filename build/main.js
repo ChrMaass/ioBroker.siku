@@ -319,7 +319,7 @@ class Siku extends utils.Adapter {
   async initializeRuntimeDevices() {
     var _a;
     await this.extendObjectAsync("devices", {
-      type: "channel",
+      type: "folder",
       common: {
         name: "L\xFCftungsger\xE4te"
       },
