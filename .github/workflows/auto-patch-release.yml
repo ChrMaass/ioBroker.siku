@@ -87,9 +87,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Prepare non-interactive release config
+        if: steps.preflight.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const config = JSON.parse(fs.readFileSync('.releaseconfig.json', 'utf8'));
+
+          // The manual-review plugin is useful for local releases, but it opens an
+          // interactive prompt in CI. Keep the repository config unchanged and use
+          // a temporary CI-only config instead.
+          config.plugins = (config.plugins ?? []).filter(plugin => plugin !== 'manual-review');
+          fs.writeFileSync('/tmp/releaseconfig.auto.json', `${JSON.stringify(config, null, 4)}\n`);
+          NODE
+
       - name: Create the next patch release locally
         if: steps.preflight.outputs.should_release == 'true'
-        run: npx release-script patch --yes --noPush --noWorkflowCheck
+        run: npx release-script patch --config /tmp/releaseconfig.auto.json --yes --noPush --noWorkflowCheck
 
       - name: Capture release metadata
         if: steps.preflight.outputs.should_release == 'true'
