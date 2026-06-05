@@ -146,7 +146,7 @@ const SIKU_STATE_DEFINITIONS = [
   },
   {
     relativeId: "control.timerMode",
-    common: { name: "Timer-Modus", role: "level.mode", type: "number", read: true, write: true, def: 0 },
+    common: { name: "Timer-Modus", role: "level", type: "number", read: true, write: true, def: 0 },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_TIMER_MODE, decode: import_siku_protocol.decodeUnsignedLE },
     write: { parameter: import_siku_constants.SIKU_PARAMETER_TIMER_MODE, encode: (value) => encodeIntegerRange(value, 0, 2, "Timer mode") }
   },
@@ -286,7 +286,7 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "control.boostOverrunMinutes",
     common: {
       name: "Boost-Nachlauf",
-      role: "value.interval",
+      role: "level.timer",
       type: "number",
       unit: "min",
       read: true,
@@ -360,7 +360,7 @@ const SIKU_STATE_DEFINITIONS = [
   },
   {
     relativeId: "control.fanMode",
-    common: { name: "Betriebsart", role: "level.mode", type: "number", read: true, write: true, def: 0 },
+    common: { name: "Betriebsart", role: "level", type: "number", read: true, write: true, def: 0 },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_FAN_MODE, decode: import_siku_protocol.decodeUnsignedLE },
     write: { parameter: import_siku_constants.SIKU_PARAMETER_FAN_MODE, encode: (value) => encodeIntegerRange(value, 0, 2, "Fan mode") }
   },
@@ -372,7 +372,7 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "control.analogSensorSetpoint",
     common: {
       name: "0-10V-Sollwert",
-      role: "value",
+      role: "level",
       type: "number",
       unit: "%",
       read: true,
@@ -391,7 +391,7 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "timers.nightModeSetpointMinutes",
     common: {
       name: "Nachtbetrieb",
-      role: "value.interval",
+      role: "level.timer",
       type: "number",
       unit: "min",
       read: true,
@@ -430,7 +430,7 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "timers.partyModeSetpointMinutes",
     common: {
       name: "Partybetrieb",
-      role: "value.interval",
+      role: "level.timer",
       type: "number",
       unit: "min",
       read: true,
