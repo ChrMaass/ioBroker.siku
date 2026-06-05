@@ -102,6 +102,11 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Network/service functions such as Wi-Fi reconfiguration, password changes or factory reset are intentionally not exposed as normal writable states.
 
 ## Changelog
+
+<!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+
+### **WORK IN PROGRESS**
+
 ### 0.1.6 (2026-06-05)
 
 - Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
@@ -112,8 +117,6 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Added Windows to the release-relevant adapter test matrix and updated CI/CD documentation.
 - Updated admin translations, js-controller minimum version and ioBroker type definitions.
 - Hardened UDP timeout handling and added timeout cleanup test coverage.
-
-<!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 
 ### 0.1.4 (2026-04-18)
 
