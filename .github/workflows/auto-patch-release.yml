@@ -104,7 +104,7 @@ jobs:
 
       - name: Create the next patch release locally
         if: steps.preflight.outputs.should_release == 'true'
-        run: npx release-script patch --config /tmp/releaseconfig.auto.json --yes --noPush --noWorkflowCheck
+        run: npx release-script patch --config /tmp/releaseconfig.auto.json --yes --noPush --noWorkflowCheck --addPlaceholder
 
       - name: Capture release metadata
         if: steps.preflight.outputs.should_release == 'true'
