@@ -103,6 +103,10 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+
+- Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
+
 ### 0.1.5 (2026-05-31)
 
 - Addressed the latest ioBroker repository checker findings for `latest` intake.
