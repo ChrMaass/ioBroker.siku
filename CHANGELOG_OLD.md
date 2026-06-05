@@ -1,4 +1,9 @@
 # Older changelog entries
+## 0.1.1 (2026-04-18)
+
+- Cleaned up adapter-check metadata for the `latest` intake and npm follow-up release
+- Removed deprecated `common.title` usage and trimmed io-package keywords
+- Simplified the io-package news list to published npm versions only
 
 ## 0.1.0 (2026-04-17)
 

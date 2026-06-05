@@ -102,8 +102,7 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Network/service functions such as Wi-Fi reconfiguration, password changes or factory reset are intentionally not exposed as normal writable states.
 
 ## Changelog
-
-### **WORK IN PROGRESS**
+### 0.1.6 (2026-06-05)
 
 - Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
 
@@ -129,12 +128,6 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
 - Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
 - Added Trusted Publishing based npm CD plus automatic GitHub release notes with optional Copilot summaries
-
-### 0.1.1 (2026-04-18)
-
-- Cleaned up adapter-check metadata for the `latest` intake and npm follow-up release
-- Removed deprecated `common.title` usage and trimmed io-package keywords
-- Simplified the io-package news list to published npm versions only
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 

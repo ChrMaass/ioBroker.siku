@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "news": {
+      "0.1.6": {
+        "en": "Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.",
+        "de": "Mit dem Object-Structure-Checker wurde die ioBroker Objekthierarchie und schreibbare Zustandsrollen ligiert.",
+        "ru": "Выровняли иерархию объектов ioBroker и функции написанного состояния с Object-Structure-Checker.",
+        "pt": "Alinhado à hierarquia de objetos ioBroker e papéis de estado writáveis com o Object-Structure-Checker.",
+        "nl": "De ioBroker objecthiërarchie en beschrijfbare staat rollen met de Object-Structure-Checker uitlijnen.",
+        "fr": "Alignez la hiérarchie d'objet ioBroker et les rôles d'état en écriture avec l'Object-Structure-Checker.",
+        "it": "Allineato la gerarchia degli oggetti ioBroker e ruoli di stato scrivibili con il Object-Structure-Checker.",
+        "es": "Alinea la jerarquía de objetos ioBroker y los roles de estado complacientes con el Object-Structure-Checker.",
+        "pl": "Dopasowanie hierarchii obiektów jOBroker i zapisywalnych ról stanu do Object- Structure- Checker.",
+        "uk": "Визначено ієрархію об’єкта ioBroker та життєздатні ролі держави з об’єктом-структурою-Чекером.",
+        "zh-cn": "将ioBroker对象等级和可写状态角色与对象-Structure-Checker对齐."
+      },
       "0.1.5": {
         "en": "Addressed ioBroker repository checker findings, updated CI matrix and translations, and hardened UDP timeout handling.",
         "de": "ioBroker-Repository-Checker-Hinweise behoben, CI-Matrix und Übersetzungen aktualisiert sowie UDP-Timeout-Handling gehärtet.",
