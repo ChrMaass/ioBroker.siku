@@ -9,6 +9,11 @@ export const SIKU_DEFAULT_TIME_CHECK_INTERVAL_HOURS = 24;
 export const SIKU_MIN_TIME_CHECK_INTERVAL_HOURS = 24;
 export const SIKU_MAX_TIME_CHECK_INTERVAL_HOURS = Math.floor(SIKU_NODEJS_MAX_TIMER_MS / (60 * 60 * 1000));
 
+export const SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC = 10;
+export const SIKU_MIN_TIME_SYNC_THRESHOLD_SEC = 10;
+/** One day is intentionally more than enough drift for a sync threshold while staying easy to understand. */
+export const SIKU_MAX_TIME_SYNC_THRESHOLD_SEC = 24 * 60 * 60;
+
 function normalizeFiniteInteger(value: unknown, fallback: number): number {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
         return fallback;
@@ -52,4 +57,21 @@ export function getTimeCheckIntervalMs(configuredHours: unknown): number {
     );
 
     return hours * 60 * 60 * 1000;
+}
+
+/**
+ * Normalizes the user-configurable RTC sync threshold to a positive, bounded value.
+ *
+ * The product decision is to correct clocks only when the drift is greater than 10 seconds,
+ * therefore the lower bound intentionally stays at 10 seconds even if native config data is
+ * edited outside the Admin UI.
+ *
+ * @param configuredSeconds - Raw value from native.timeSyncThresholdSec
+ */
+export function getTimeSyncThresholdSec(configuredSeconds: unknown): number {
+    return clampInteger(
+        normalizeFiniteInteger(configuredSeconds, SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC),
+        SIKU_MIN_TIME_SYNC_THRESHOLD_SEC,
+        SIKU_MAX_TIME_SYNC_THRESHOLD_SEC,
+    );
 }

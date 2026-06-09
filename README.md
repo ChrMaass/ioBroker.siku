@@ -101,11 +101,28 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 - Live write tests have intentionally been kept conservative.
 - Network/service functions such as Wi-Fi reconfiguration, password changes or factory reset are intentionally not exposed as normal writable states.
 
+## Advanced messagebox API
+
+The adapter exposes these `sendTo` commands for scripts and integrations:
+
+- `discover`: run UDP broadcast discovery and merge discovered devices into the adapter config.
+- `syncTimeAll`: run a manual RTC check/sync for all configured devices.
+- `syncTimeDevice`: run a manual RTC check/sync for one configured device by `deviceId`.
+- `readDevice`: read selected raw protocol parameters from one configured device for diagnostics.
+
+The diagnostic `readDevice` response serializes packet metadata and returned parameter values as hex strings. Device passwords are never returned; the response only includes `passwordLength`.
+
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 
 ### **WORK IN PROGRESS**
+
+### 0.1.8 (2026-06-09)
+
+- Cleaned up unused Admin translations found during the adapter checklist review.
+- Documented the advanced messagebox commands for script/integration use.
+- Added a code-side upper bound for the RTC time sync drift threshold.
 
 ### 0.1.7 (2026-06-09)
 

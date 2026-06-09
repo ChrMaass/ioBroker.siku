@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Adaptereinstellungen für siku",
     "pollIntervalSec": "Poll-Intervall (Sekunden)",
     "discoveryBroadcastAddress": "Broadcast-Adresse für Discovery",
     "timeCheckIntervalHours": "Zeitprüfung alle X Stunden",
     "timeSyncThresholdSec": "Zeitsync erst ab Drift > X Sekunden",
-    "configInfo": "Die Multi-Device-Konfiguration und Discovery-Aktionen werden in den nächsten Entwicklungsschritten ergänzt.",
     "discoveryInfo": "Über den Discovery-Button lassen sich SIKU-Master per UDP-Broadcast finden und in die Gerätetabelle übernehmen. Bestehende Namen, Aktivierungsflags und geräte-ID-basierte Zugangsdaten bleiben erhalten.",
     "discoverDevicesAction": "Lüfter im Netzwerk identifizieren",
     "discoveryUpdated": "Die Discovery hat die Geräteliste aktualisiert. Bitte die Konfiguration speichern.",

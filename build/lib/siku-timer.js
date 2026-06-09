@@ -20,13 +20,17 @@ var siku_timer_exports = {};
 __export(siku_timer_exports, {
   SIKU_DEFAULT_POLL_INTERVAL_SEC: () => SIKU_DEFAULT_POLL_INTERVAL_SEC,
   SIKU_DEFAULT_TIME_CHECK_INTERVAL_HOURS: () => SIKU_DEFAULT_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC: () => SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC,
   SIKU_MAX_POLL_INTERVAL_SEC: () => SIKU_MAX_POLL_INTERVAL_SEC,
   SIKU_MAX_TIME_CHECK_INTERVAL_HOURS: () => SIKU_MAX_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_MAX_TIME_SYNC_THRESHOLD_SEC: () => SIKU_MAX_TIME_SYNC_THRESHOLD_SEC,
   SIKU_MIN_POLL_INTERVAL_SEC: () => SIKU_MIN_POLL_INTERVAL_SEC,
   SIKU_MIN_TIME_CHECK_INTERVAL_HOURS: () => SIKU_MIN_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_MIN_TIME_SYNC_THRESHOLD_SEC: () => SIKU_MIN_TIME_SYNC_THRESHOLD_SEC,
   SIKU_NODEJS_MAX_TIMER_MS: () => SIKU_NODEJS_MAX_TIMER_MS,
   getPollIntervalMs: () => getPollIntervalMs,
-  getTimeCheckIntervalMs: () => getTimeCheckIntervalMs
+  getTimeCheckIntervalMs: () => getTimeCheckIntervalMs,
+  getTimeSyncThresholdSec: () => getTimeSyncThresholdSec
 });
 module.exports = __toCommonJS(siku_timer_exports);
 const SIKU_NODEJS_MAX_TIMER_MS = 2147483647;
@@ -36,6 +40,9 @@ const SIKU_MAX_POLL_INTERVAL_SEC = Math.floor(SIKU_NODEJS_MAX_TIMER_MS / 1e3);
 const SIKU_DEFAULT_TIME_CHECK_INTERVAL_HOURS = 24;
 const SIKU_MIN_TIME_CHECK_INTERVAL_HOURS = 24;
 const SIKU_MAX_TIME_CHECK_INTERVAL_HOURS = Math.floor(SIKU_NODEJS_MAX_TIMER_MS / (60 * 60 * 1e3));
+const SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC = 10;
+const SIKU_MIN_TIME_SYNC_THRESHOLD_SEC = 10;
+const SIKU_MAX_TIME_SYNC_THRESHOLD_SEC = 24 * 60 * 60;
 function normalizeFiniteInteger(value, fallback) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return fallback;
@@ -61,16 +68,27 @@ function getTimeCheckIntervalMs(configuredHours) {
   );
   return hours * 60 * 60 * 1e3;
 }
+function getTimeSyncThresholdSec(configuredSeconds) {
+  return clampInteger(
+    normalizeFiniteInteger(configuredSeconds, SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC),
+    SIKU_MIN_TIME_SYNC_THRESHOLD_SEC,
+    SIKU_MAX_TIME_SYNC_THRESHOLD_SEC
+  );
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   SIKU_DEFAULT_POLL_INTERVAL_SEC,
   SIKU_DEFAULT_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC,
   SIKU_MAX_POLL_INTERVAL_SEC,
   SIKU_MAX_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_MAX_TIME_SYNC_THRESHOLD_SEC,
   SIKU_MIN_POLL_INTERVAL_SEC,
   SIKU_MIN_TIME_CHECK_INTERVAL_HOURS,
+  SIKU_MIN_TIME_SYNC_THRESHOLD_SEC,
   SIKU_NODEJS_MAX_TIMER_MS,
   getPollIntervalMs,
-  getTimeCheckIntervalMs
+  getTimeCheckIntervalMs,
+  getTimeSyncThresholdSec
 });
 //# sourceMappingURL=siku-timer.js.map

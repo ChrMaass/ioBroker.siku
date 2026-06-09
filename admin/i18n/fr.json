@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Paramètres de l’adaptateur SIKU",
     "pollIntervalSec": "Intervalle d’interrogation (secondes)",
     "discoveryBroadcastAddress": "Adresse de diffusion pour la découverte",
     "timeCheckIntervalHours": "Vérification de l’heure toutes les X heures",
     "timeSyncThresholdSec": "Synchroniser l’heure seulement au-delà d’un écart de X secondes",
-    "configInfo": "La configuration multi-appareils et les actions de découverte seront ajoutées lors des prochaines étapes de développement.",
     "discoveryInfo": "Utilisez le bouton de découverte pour identifier les maîtres SIKU via une diffusion UDP et les fusionner dans le tableau des appareils. Les noms existants, les indicateurs d’activation et les identifiants liés à l’ID d’appareil sont conservés.",
     "discoverDevicesAction": "Identifier les appareils sur le réseau",
     "discoveryUpdated": "La découverte a mis à jour la liste des appareils. Veuillez enregistrer la configuration.",

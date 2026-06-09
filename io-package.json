@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "news": {
+      "0.1.8": {
+        "en": "Cleaned up unused Admin translations, documented advanced messagebox commands and hardened the time sync threshold setting.",
+        "de": "Ungenutzte Admin-Übersetzungen bereinigt, erweiterte Messagebox-Kommandos dokumentiert und die Zeitsync-Schwelle gehärtet.",
+        "ru": "Удалены неиспользуемые переводы Admin, задокументированы расширенные команды messagebox и усилена настройка порога синхронизации времени.",
+        "pt": "Removidas traduções Admin não utilizadas, documentados comandos avançados de messagebox e reforçada a configuração do limite de sincronização de hora.",
+        "nl": "Ongebruikte Admin-vertalingen opgeschoond, geavanceerde messagebox-opdrachten gedocumenteerd en de tijdsynchronisatiedrempel robuuster gemaakt.",
+        "fr": "Nettoyage des traductions Admin inutilisées, documentation des commandes messagebox avancées et durcissement du seuil de synchronisation horaire.",
+        "it": "Ripulite le traduzioni Admin inutilizzate, documentati i comandi messagebox avanzati e rafforzata la soglia di sincronizzazione dell’orario.",
+        "es": "Eliminadas traducciones Admin no utilizadas, documentados comandos avanzados de messagebox y reforzado el ajuste del umbral de sincronización horaria.",
+        "pl": "Usunięto nieużywane tłumaczenia Admin, udokumentowano zaawansowane polecenia messagebox i wzmocniono ustawienie progu synchronizacji czasu.",
+        "uk": "Очищено невикористані переклади Admin, задокументовано розширені команди messagebox і посилено налаштування порога синхронізації часу.",
+        "zh-cn": "清理未使用的 Admin 翻译，记录高级 messagebox 命令，并强化时间同步阈值设置。"
+      },
       "0.1.7": {
         "en": "Converted runtime logs and ioBroker object labels to English and added Node.js-safe timer interval limits.",
         "de": "Runtime-Logs und ioBroker-Objektbezeichnungen auf Englisch umgestellt und Node.js-sichere Timer-Intervallgrenzen ergänzt.",

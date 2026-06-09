@@ -2,8 +2,12 @@ import { expect } from 'chai';
 import {
     getPollIntervalMs,
     getTimeCheckIntervalMs,
+    getTimeSyncThresholdSec,
+    SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC,
     SIKU_MAX_POLL_INTERVAL_SEC,
     SIKU_MAX_TIME_CHECK_INTERVAL_HOURS,
+    SIKU_MAX_TIME_SYNC_THRESHOLD_SEC,
+    SIKU_MIN_TIME_SYNC_THRESHOLD_SEC,
     SIKU_NODEJS_MAX_TIMER_MS,
 } from './siku-timer';
 
@@ -21,6 +25,15 @@ describe('siku-timer', () => {
         expect(getTimeCheckIntervalMs(Number.NaN)).to.equal(24 * 60 * 60 * 1000);
         expect(getTimeCheckIntervalMs(SIKU_MAX_TIME_CHECK_INTERVAL_HOURS + 1000)).to.be.at.most(
             SIKU_NODEJS_MAX_TIMER_MS,
+        );
+    });
+
+    it('keeps the RTC sync threshold positive and bounded', () => {
+        expect(getTimeSyncThresholdSec(0)).to.equal(SIKU_MIN_TIME_SYNC_THRESHOLD_SEC);
+        expect(getTimeSyncThresholdSec(SIKU_MIN_TIME_SYNC_THRESHOLD_SEC)).to.equal(SIKU_MIN_TIME_SYNC_THRESHOLD_SEC);
+        expect(getTimeSyncThresholdSec(Number.NaN)).to.equal(SIKU_DEFAULT_TIME_SYNC_THRESHOLD_SEC);
+        expect(getTimeSyncThresholdSec(SIKU_MAX_TIME_SYNC_THRESHOLD_SEC + 1000)).to.equal(
+            SIKU_MAX_TIME_SYNC_THRESHOLD_SEC,
         );
     });
 });

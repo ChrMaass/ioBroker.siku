@@ -49,7 +49,7 @@ import {
 } from './lib/siku-state-mapping';
 import { toHex } from './lib/siku-protocol';
 import { calculateClockDriftSeconds, decodeRtcSnapshot, encodeRtcCalendar, encodeRtcTime } from './lib/siku-time';
-import { getPollIntervalMs, getTimeCheckIntervalMs } from './lib/siku-timer';
+import { getPollIntervalMs, getTimeCheckIntervalMs, getTimeSyncThresholdSec } from './lib/siku-timer';
 import { decodePollSnapshot, normalizeConfiguredDevice } from './lib/siku-runtime';
 import type { SikuDiscoveredDevice } from './lib/siku-network';
 import type { ParsedSikuPacket, SikuReadRequestEntry } from './lib/siku-protocol';
@@ -742,7 +742,7 @@ class Siku extends utils.Adapter {
                 `Time check ${device.name} (${device.id}) [${trigger}]: drift ${driftSec}s against ${referenceTime.toISOString()}`,
             );
 
-            if (Math.abs(driftSec) <= Math.max(this.config.timeSyncThresholdSec ?? 10, 0)) {
+            if (Math.abs(driftSec) <= getTimeSyncThresholdSec(this.config.timeSyncThresholdSec)) {
                 return {
                     deviceId: device.id,
                     host: device.host,
