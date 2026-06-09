@@ -48,7 +48,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'speed',
                     common: {
-                        name: `${day.name} period ${periodNumber} - fan speed`,
+                        name: `${day.name} Period ${periodNumber} - Fan speed`,
                         role: 'level.speed',
                         type: 'number',
                         read: true,
@@ -65,7 +65,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'endHour',
                     common: {
-                        name: `${day.name} period ${periodNumber} - end hour`,
+                        name: `${day.name} Period ${periodNumber} - End hour`,
                         role: 'level',
                         type: 'number',
                         read: true,
@@ -82,7 +82,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'endMinute',
                     common: {
-                        name: `${day.name} period ${periodNumber} - end minute`,
+                        name: `${day.name} Period ${periodNumber} - End minute`,
                         role: 'level',
                         type: 'number',
                         read: true,
