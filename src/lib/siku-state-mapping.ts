@@ -178,13 +178,13 @@ function getPacketEntry(packet: ParsedSikuPacket, parameter: number): Buffer | u
 export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'control.power',
-        common: { name: 'Eingeschaltet', role: 'switch', type: 'boolean', read: true, write: true, def: false },
+        common: { name: 'Power', role: 'switch', type: 'boolean', read: true, write: true, def: false },
         read: { parameter: SIKU_PARAMETER_POWER, decode: decodeBoolean },
         write: { parameter: SIKU_PARAMETER_POWER, encode: encodeBooleanSwitch },
     },
     {
         relativeId: 'control.fanSpeed',
-        common: { name: 'Lüfterstufe', role: 'level.speed', type: 'number', read: true, write: true, def: 1 },
+        common: { name: 'Fan speed', role: 'level.speed', type: 'number', read: true, write: true, def: 1 },
         read: { parameter: SIKU_PARAMETER_FAN_SPEED, decode: decodeUnsignedLE },
         write: {
             parameter: SIKU_PARAMETER_FAN_SPEED,
@@ -193,41 +193,48 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'timers.boostActive',
-        common: { name: 'Boost aktiv', role: 'indicator', type: 'boolean', read: true, write: false, def: false },
+        common: { name: 'Boost active', role: 'indicator', type: 'boolean', read: true, write: false, def: false },
         read: { parameter: SIKU_PARAMETER_BOOST_STATUS, decode: decodeBoolean },
     },
     {
         relativeId: 'control.timerMode',
-        common: { name: 'Timer-Modus', role: 'level', type: 'number', read: true, write: true, def: 0 },
+        common: { name: 'Timer mode', role: 'level', type: 'number', read: true, write: true, def: 0 },
         read: { parameter: SIKU_PARAMETER_TIMER_MODE, decode: decodeUnsignedLE },
         write: { parameter: SIKU_PARAMETER_TIMER_MODE, encode: value => encodeIntegerRange(value, 0, 2, 'Timer mode') },
     },
     {
         relativeId: 'control.timerModeText',
-        common: { name: 'Timer-Modus (Text)', role: 'text', type: 'string', read: true, write: false, def: '' },
+        common: { name: 'Timer mode (text)', role: 'text', type: 'string', read: true, write: false, def: '' },
     },
     {
         relativeId: 'control.humiditySensorEnabled',
-        common: { name: 'Feuchtesensor aktiv', role: 'switch', type: 'boolean', read: true, write: true, def: false },
+        common: {
+            name: 'Humidity sensor enabled',
+            role: 'switch',
+            type: 'boolean',
+            read: true,
+            write: true,
+            def: false,
+        },
         read: { parameter: SIKU_PARAMETER_HUMIDITY_SENSOR_ENABLED, decode: decodeBoolean },
         write: { parameter: SIKU_PARAMETER_HUMIDITY_SENSOR_ENABLED, encode: encodeBooleanSwitch },
     },
     {
         relativeId: 'control.relaySensorEnabled',
-        common: { name: 'Relais-Sensor aktiv', role: 'switch', type: 'boolean', read: true, write: true, def: false },
+        common: { name: 'Relay sensor enabled', role: 'switch', type: 'boolean', read: true, write: true, def: false },
         read: { parameter: SIKU_PARAMETER_RELAY_SENSOR_ENABLED, decode: decodeBoolean },
         write: { parameter: SIKU_PARAMETER_RELAY_SENSOR_ENABLED, encode: encodeBooleanSwitch },
     },
     {
         relativeId: 'control.analogSensorEnabled',
-        common: { name: '0-10V-Sensor aktiv', role: 'switch', type: 'boolean', read: true, write: true, def: false },
+        common: { name: '0-10V sensor enabled', role: 'switch', type: 'boolean', read: true, write: true, def: false },
         read: { parameter: SIKU_PARAMETER_ANALOG_SENSOR_ENABLED, decode: decodeBoolean },
         write: { parameter: SIKU_PARAMETER_ANALOG_SENSOR_ENABLED, encode: encodeBooleanSwitch },
     },
     {
         relativeId: 'control.humiditySetpoint',
         common: {
-            name: 'Feuchtesollwert',
+            name: 'Humidity setpoint',
             role: 'level.humidity',
             type: 'number',
             unit: '%',
@@ -246,7 +253,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'sensors.rtcBatteryVoltage',
         common: {
-            name: 'RTC-Batteriespannung',
+            name: 'RTC battery voltage',
             role: 'value.voltage',
             type: 'number',
             unit: 'mV',
@@ -258,7 +265,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'sensors.humidity',
         common: {
-            name: 'Aktuelle Feuchte',
+            name: 'Current humidity',
             role: 'value.humidity',
             type: 'number',
             unit: '%',
@@ -269,18 +276,25 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'sensors.analogSensorValue',
-        common: { name: '0-10V-Sensorwert', role: 'value', type: 'number', unit: '%', read: true, write: false },
+        common: { name: '0-10V sensor value', role: 'value', type: 'number', unit: '%', read: true, write: false },
         read: { parameter: SIKU_PARAMETER_ANALOG_SENSOR_VALUE, decode: decodeUnsignedLE },
     },
     {
         relativeId: 'sensors.relaySensorValue',
-        common: { name: 'Relais-Sensorwert', role: 'indicator', type: 'boolean', read: true, write: false, def: false },
+        common: {
+            name: 'Relay sensor value',
+            role: 'indicator',
+            type: 'boolean',
+            read: true,
+            write: false,
+            def: false,
+        },
         read: { parameter: SIKU_PARAMETER_RELAY_SENSOR_VALUE, decode: decodeBoolean },
     },
     {
         relativeId: 'control.manualFanSpeed',
         common: {
-            name: 'Manuelle Lüfterstufe',
+            name: 'Manual fan speed',
             role: 'level.speed',
             type: 'number',
             read: true,
@@ -297,18 +311,18 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'sensors.fan1Rpm',
-        common: { name: 'Ventilator 1', role: 'value.speed', type: 'number', unit: 'rpm', read: true, write: false },
+        common: { name: 'Fan 1', role: 'value.speed', type: 'number', unit: 'rpm', read: true, write: false },
         read: { parameter: SIKU_PARAMETER_FAN1_RPM, decode: decodeUnsignedLE },
     },
     {
         relativeId: 'sensors.fan2Rpm',
-        common: { name: 'Ventilator 2', role: 'value.speed', type: 'number', unit: 'rpm', read: true, write: false },
+        common: { name: 'Fan 2', role: 'value.speed', type: 'number', unit: 'rpm', read: true, write: false },
         read: { parameter: SIKU_PARAMETER_FAN2_RPM, decode: decodeUnsignedLE },
     },
     {
         relativeId: 'timers.filterCountdownMinutes',
         common: {
-            name: 'Filter-Countdown (Minuten)',
+            name: 'Filter countdown (minutes)',
             role: 'value.interval',
             type: 'number',
             unit: 'min',
@@ -319,13 +333,13 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'timers.filterCountdownText',
-        common: { name: 'Filter-Countdown', role: 'text', type: 'string', read: true, write: false, def: '' },
+        common: { name: 'Filter countdown', role: 'text', type: 'string', read: true, write: false, def: '' },
         read: { parameter: SIKU_PARAMETER_FILTER_COUNTDOWN, decode: decodeCountdownText },
     },
     {
         relativeId: 'control.resetFilterTimer',
         common: {
-            name: 'Filtertimer zurücksetzen',
+            name: 'Reset filter timer',
             role: 'button',
             type: 'boolean',
             read: false,
@@ -337,7 +351,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'control.boostOverrunMinutes',
         common: {
-            name: 'Boost-Nachlauf',
+            name: 'Boost overrun',
             role: 'level.timer',
             type: 'number',
             unit: 'min',
@@ -356,7 +370,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'control.timeControlledOperation',
         common: {
-            name: 'Zeitgesteuerter Betrieb',
+            name: 'Time-controlled operation',
             role: 'switch',
             type: 'boolean',
             read: true,
@@ -369,7 +383,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'info.operatingHoursMinutes',
         common: {
-            name: 'Betriebsstunden (Minuten)',
+            name: 'Operating hours (minutes)',
             role: 'value.interval',
             type: 'number',
             unit: 'min',
@@ -380,28 +394,28 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'info.operatingHoursText',
-        common: { name: 'Betriebsstunden', role: 'text', type: 'string', read: true, write: false, def: '' },
+        common: { name: 'Operating hours', role: 'text', type: 'string', read: true, write: false, def: '' },
         read: { parameter: SIKU_PARAMETER_OPERATING_HOURS, decode: decodeOperatingHoursText },
     },
     {
         relativeId: 'diagnostics.resetAlarms',
-        common: { name: 'Alarme zurücksetzen', role: 'button', type: 'boolean', read: false, write: true, def: false },
+        common: { name: 'Reset alarms', role: 'button', type: 'boolean', read: false, write: true, def: false },
         write: { parameter: SIKU_PARAMETER_RESET_ALARMS, encode: encodeButtonPress, isButton: true },
     },
     {
         relativeId: 'diagnostics.alarmLevel',
-        common: { name: 'Alarm-/Warnstufe', role: 'value', type: 'number', read: true, write: false },
+        common: { name: 'Alarm/warning level', role: 'value', type: 'number', read: true, write: false },
         read: { parameter: SIKU_PARAMETER_ALARM_LEVEL, decode: decodeUnsignedLE },
     },
     {
         relativeId: 'info.firmwareVersion',
-        common: { name: 'Firmware-Version', role: 'text', type: 'string', read: true, write: false, def: '' },
+        common: { name: 'Firmware version', role: 'text', type: 'string', read: true, write: false, def: '' },
         read: { parameter: SIKU_PARAMETER_FIRMWARE_VERSION, decode: decodeFirmwareVersion },
     },
     {
         relativeId: 'diagnostics.filterChangeRequired',
         common: {
-            name: 'Filterwechsel erforderlich',
+            name: 'Filter change required',
             role: 'indicator.maintenance',
             type: 'boolean',
             read: true,
@@ -412,18 +426,18 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     },
     {
         relativeId: 'control.fanMode',
-        common: { name: 'Betriebsart', role: 'level', type: 'number', read: true, write: true, def: 0 },
+        common: { name: 'Fan mode', role: 'level', type: 'number', read: true, write: true, def: 0 },
         read: { parameter: SIKU_PARAMETER_FAN_MODE, decode: decodeUnsignedLE },
         write: { parameter: SIKU_PARAMETER_FAN_MODE, encode: value => encodeIntegerRange(value, 0, 2, 'Fan mode') },
     },
     {
         relativeId: 'control.fanModeText',
-        common: { name: 'Betriebsart (Text)', role: 'text', type: 'string', read: true, write: false, def: '' },
+        common: { name: 'Fan mode (text)', role: 'text', type: 'string', read: true, write: false, def: '' },
     },
     {
         relativeId: 'control.analogSensorSetpoint',
         common: {
-            name: '0-10V-Sollwert',
+            name: '0-10V setpoint',
             role: 'level',
             type: 'number',
             unit: '%',
@@ -442,7 +456,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'timers.nightModeSetpointMinutes',
         common: {
-            name: 'Nachtbetrieb',
+            name: 'Night mode duration',
             role: 'level.timer',
             type: 'number',
             unit: 'min',
@@ -456,7 +470,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'timers.timerCountdownSeconds',
         common: {
-            name: 'Verbleibende Timerdauer',
+            name: 'Remaining timer duration',
             role: 'value.interval',
             type: 'number',
             unit: 's',
@@ -469,7 +483,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'timers.timerCountdownText',
         common: {
-            name: 'Verbleibende Timerdauer (Text)',
+            name: 'Remaining timer duration (text)',
             role: 'text',
             type: 'string',
             read: true,
@@ -481,7 +495,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'timers.partyModeSetpointMinutes',
         common: {
-            name: 'Partybetrieb',
+            name: 'Party mode duration',
             role: 'level.timer',
             type: 'number',
             unit: 'min',
@@ -495,7 +509,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'sensors.humidityAboveSetpoint',
         common: {
-            name: 'Feuchte über Sollwert',
+            name: 'Humidity above setpoint',
             role: 'indicator',
             type: 'boolean',
             read: true,
@@ -507,7 +521,7 @@ export const SIKU_STATE_DEFINITIONS: readonly SikuStateDefinition[] = [
     {
         relativeId: 'sensors.analogAboveSetpoint',
         common: {
-            name: '0-10V über Sollwert',
+            name: '0-10V above setpoint',
             role: 'indicator',
             type: 'boolean',
             read: true,

@@ -32,13 +32,13 @@ __export(siku_schedule_exports, {
 module.exports = __toCommonJS(siku_schedule_exports);
 var import_siku_constants = require("./siku-constants");
 const SIKU_SCHEDULE_DAYS = [
-  { key: "monday", number: 1, name: "Montag" },
-  { key: "tuesday", number: 2, name: "Dienstag" },
-  { key: "wednesday", number: 3, name: "Mittwoch" },
-  { key: "thursday", number: 4, name: "Donnerstag" },
-  { key: "friday", number: 5, name: "Freitag" },
-  { key: "saturday", number: 6, name: "Samstag" },
-  { key: "sunday", number: 7, name: "Sonntag" }
+  { key: "monday", number: 1, name: "Monday" },
+  { key: "tuesday", number: 2, name: "Tuesday" },
+  { key: "wednesday", number: 3, name: "Wednesday" },
+  { key: "thursday", number: 4, name: "Thursday" },
+  { key: "friday", number: 5, name: "Friday" },
+  { key: "saturday", number: 6, name: "Saturday" },
+  { key: "sunday", number: 7, name: "Sunday" }
 ];
 const SIKU_SCHEDULE_PERIODS = [1, 2, 3, 4];
 function buildScheduleStateDefinitions() {
@@ -54,7 +54,7 @@ function buildScheduleStateDefinitions() {
           periodNumber,
           field: "speed",
           common: {
-            name: `${day.name} Periode ${periodNumber} - L\xFCfterstufe`,
+            name: `${day.name} Period ${periodNumber} - Fan speed`,
             role: "level.speed",
             type: "number",
             read: true,
@@ -71,7 +71,7 @@ function buildScheduleStateDefinitions() {
           periodNumber,
           field: "endHour",
           common: {
-            name: `${day.name} Periode ${periodNumber} - Endstunde`,
+            name: `${day.name} Period ${periodNumber} - End hour`,
             role: "level",
             type: "number",
             read: true,
@@ -88,7 +88,7 @@ function buildScheduleStateDefinitions() {
           periodNumber,
           field: "endMinute",
           common: {
-            name: `${day.name} Periode ${periodNumber} - Endminute`,
+            name: `${day.name} Period ${periodNumber} - End minute`,
             role: "level",
             type: "number",
             read: true,

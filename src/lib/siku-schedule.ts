@@ -22,13 +22,13 @@ export interface SikuScheduleStateDefinition {
 }
 
 const SIKU_SCHEDULE_DAYS: readonly SikuScheduleDayDefinition[] = [
-    { key: 'monday', number: 1, name: 'Montag' },
-    { key: 'tuesday', number: 2, name: 'Dienstag' },
-    { key: 'wednesday', number: 3, name: 'Mittwoch' },
-    { key: 'thursday', number: 4, name: 'Donnerstag' },
-    { key: 'friday', number: 5, name: 'Freitag' },
-    { key: 'saturday', number: 6, name: 'Samstag' },
-    { key: 'sunday', number: 7, name: 'Sonntag' },
+    { key: 'monday', number: 1, name: 'Monday' },
+    { key: 'tuesday', number: 2, name: 'Tuesday' },
+    { key: 'wednesday', number: 3, name: 'Wednesday' },
+    { key: 'thursday', number: 4, name: 'Thursday' },
+    { key: 'friday', number: 5, name: 'Friday' },
+    { key: 'saturday', number: 6, name: 'Saturday' },
+    { key: 'sunday', number: 7, name: 'Sunday' },
 ] as const;
 
 const SIKU_SCHEDULE_PERIODS = [1, 2, 3, 4] as const;
@@ -48,7 +48,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'speed',
                     common: {
-                        name: `${day.name} Periode ${periodNumber} - Lüfterstufe`,
+                        name: `${day.name} Period ${periodNumber} - Fan speed`,
                         role: 'level.speed',
                         type: 'number',
                         read: true,
@@ -65,7 +65,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'endHour',
                     common: {
-                        name: `${day.name} Periode ${periodNumber} - Endstunde`,
+                        name: `${day.name} Period ${periodNumber} - End hour`,
                         role: 'level',
                         type: 'number',
                         read: true,
@@ -82,7 +82,7 @@ function buildScheduleStateDefinitions(): SikuScheduleStateDefinition[] {
                     periodNumber,
                     field: 'endMinute',
                     common: {
-                        name: `${day.name} Periode ${periodNumber} - Endminute`,
+                        name: `${day.name} Period ${periodNumber} - End minute`,
                         role: 'level',
                         type: 'number',
                         read: true,

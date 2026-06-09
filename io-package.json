@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "news": {
+      "0.1.7": {
+        "en": "Converted runtime logs and ioBroker object labels to English and added Node.js-safe timer interval limits.",
+        "de": "Runtime-Logs und ioBroker-Objektbezeichnungen auf Englisch umgestellt und Node.js-sichere Timer-Intervallgrenzen ergänzt.",
+        "ru": "Журналы выполнения и названия объектов ioBroker переведены на английский, добавлены безопасные для Node.js ограничения интервалов таймеров.",
+        "pt": "Convertidos logs de runtime e nomes de objetos ioBroker para inglês e adicionados limites de intervalos de timer seguros para Node.js.",
+        "nl": "Runtime-logs en ioBroker-objectlabels naar Engels omgezet en Node.js-veilige timerintervallimieten toegevoegd.",
+        "fr": "Journaux d’exécution et libellés des objets ioBroker passés en anglais, avec limites d’intervalles de minuterie sûres pour Node.js.",
+        "it": "Convertiti in inglese i log runtime e le etichette degli oggetti ioBroker e aggiunti limiti degli intervalli timer sicuri per Node.js.",
+        "es": "Convertidos al inglés los registros de ejecución y las etiquetas de objetos ioBroker, y añadidos límites de intervalos de temporizador seguros para Node.js.",
+        "pl": "Przeniesiono logi działania i etykiety obiektów ioBroker na język angielski oraz dodano bezpieczne dla Node.js limity interwałów timerów.",
+        "uk": "Журнали виконання та назви об’єктів ioBroker переведено англійською, додано безпечні для Node.js обмеження інтервалів таймерів.",
+        "zh-cn": "将运行时日志和 ioBroker 对象标签改为英文，并添加 Node.js 安全的定时器间隔限制。"
+      },
       "0.1.6": {
         "en": "Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.",
         "de": "Mit dem Object-Structure-Checker wurde die ioBroker Objekthierarchie und schreibbare Zustandsrollen ligiert.",

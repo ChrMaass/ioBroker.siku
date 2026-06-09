@@ -62,7 +62,7 @@ function mergeDiscoveredDevicesIntoConfig(configuredDevices, discoveredDevices) 
     mergedDevices.push({
       id: discoveredDevice.deviceId,
       host: discoveredDevice.host,
-      name: `L\xFCfter ${discoveredDevice.deviceId.slice(-4)}`,
+      name: `Fan ${discoveredDevice.deviceId.slice(-4)}`,
       enabled: true,
       discoveredType,
       lastSeen: discoveredDevice.receivedAt

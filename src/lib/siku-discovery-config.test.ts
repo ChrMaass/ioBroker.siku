@@ -73,7 +73,7 @@ describe('SIKU discovery config helpers', () => {
             {
                 id: '004500324353530B',
                 host: '192.168.55.116',
-                name: 'Lüfter 530B',
+                name: 'Fan 530B',
                 enabled: true,
                 discoveredType: '0E00 (14)',
                 lastSeen: '2026-04-17T02:00:01.000Z',

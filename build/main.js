@@ -32,6 +32,7 @@ var import_siku_schedule = require("./lib/siku-schedule");
 var import_siku_state_mapping = require("./lib/siku-state-mapping");
 var import_siku_protocol = require("./lib/siku-protocol");
 var import_siku_time = require("./lib/siku-time");
+var import_siku_timer = require("./lib/siku-timer");
 var import_siku_runtime = require("./lib/siku-runtime");
 class Siku extends utils.Adapter {
   runtimeDevices = /* @__PURE__ */ new Map();
@@ -60,7 +61,7 @@ class Siku extends utils.Adapter {
    */
   async onReady() {
     await this.setState("info.connection", false, true);
-    this.log.info("Starte SIKU-Adapter mit Multi-Device-Runtime");
+    this.log.info("Starting SIKU adapter with multi-device runtime");
     await this.migrateLegacyPasswordConfig();
     this.logSafeConfig();
     await this.initializeRuntimeDevices();
@@ -116,7 +117,7 @@ class Siku extends utils.Adapter {
       }
     } catch (error) {
       const message = error.message;
-      this.log.error(`Fehler bei Nachricht ${obj.command}: ${message}`);
+      this.log.error(`Error while handling message ${obj.command}: ${message}`);
       this.sendMessageResponse(obj, { ok: false, error: message });
     }
   }
@@ -158,11 +159,11 @@ class Siku extends utils.Adapter {
           await this.setStateChangedAsync(fullStateId, false, true);
         }
       });
-      this.log.info(`Schreibzugriff erfolgreich: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
+      this.log.info(`Write successful: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
     } catch (error) {
       const message = error.message;
-      await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, `Schreiben: ${message}`, true);
-      this.log.warn(`Schreibzugriff fehlgeschlagen f\xFCr ${device.id} (${relativeId}): ${message}`);
+      await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, `Write: ${message}`, true);
+      this.log.warn(`Write failed for ${device.id} (${relativeId}): ${message}`);
     }
   }
   /**
@@ -284,7 +285,7 @@ class Siku extends utils.Adapter {
     try {
       migratedRegistry = (0, import_siku_password_config.buildDevicePasswordRegistry)(currentDevices, rawConfiguredPasswordRegistry);
     } catch (error) {
-      this.log.warn(`Ger\xE4tepassw\xF6rter konnten nicht automatisch migriert werden: ${error.message}`);
+      this.log.warn(`Device passwords could not be migrated automatically: ${error.message}`);
       this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(this.getConfiguredPasswordRegistry());
       return;
     }
@@ -300,17 +301,15 @@ class Siku extends utils.Adapter {
     const instanceObjectId = `system.adapter.${this.namespace}`;
     const instanceObject = await this.getForeignObjectAsync(instanceObjectId);
     if (!instanceObject) {
-      this.log.warn(
-        "Die Adapter-Konfiguration konnte nach der Passwort-Migration nicht automatisch gespeichert werden."
-      );
+      this.log.warn("The adapter configuration could not be saved automatically after password migration.");
       return;
     }
     instanceObject.native = this.buildNativeConfig(strippedDevices, migratedRegistry);
     await this.setForeignObjectAsync(instanceObjectId, instanceObject);
     if (hadLegacyInlinePasswords) {
-      this.log.info("Ger\xE4tepassw\xF6rter wurden in die separate verschl\xFCsselte Passwort-Registry migriert.");
+      this.log.info("Device passwords were migrated to the dedicated encrypted password registry.");
     } else {
-      this.log.info("Ger\xE4tepasswort-Registry wurde auf die neue Konfigurationsstruktur bereinigt.");
+      this.log.info("Device password registry was normalized to the new configuration structure.");
     }
   }
   /**
@@ -321,7 +320,7 @@ class Siku extends utils.Adapter {
     await this.extendObjectAsync("devices", {
       type: "folder",
       common: {
-        name: "L\xFCftungsger\xE4te"
+        name: "Ventilation devices"
       },
       native: {}
     });
@@ -331,19 +330,21 @@ class Siku extends utils.Adapter {
       try {
         const runtimeDevice = (0, import_siku_runtime.normalizeConfiguredDevice)(configuredDevice, index, passwordRegistry);
         if (this.runtimeDevices.has(runtimeDevice.id)) {
-          this.log.warn(`Ger\xE4t ${runtimeDevice.id} ist mehrfach konfiguriert und wird nur einmal verwendet.`);
+          this.log.warn(
+            `Device ${runtimeDevice.id} is configured more than once and will only be used once.`
+          );
           continue;
         }
         this.runtimeDevices.set(runtimeDevice.id, runtimeDevice);
         await this.ensureDeviceObjects(runtimeDevice);
         await this.applyConfiguredDeviceMetadata(runtimeDevice, { resetConnectionState: true });
       } catch (error) {
-        this.log.warn(`Ung\xFCltige Ger\xE4tekonfiguration unter devices[${index}]: ${error.message}`);
+        this.log.warn(`Invalid device configuration at devices[${index}]: ${error.message}`);
       }
     }
     if (this.runtimeDevices.size === 0) {
       this.log.info(
-        "Keine g\xFCltigen L\xFCfter konfiguriert. Discovery, readDevice und syncTime bleiben \xFCber sendTo nutzbar."
+        "No valid fans configured. Discovery, readDevice and syncTime remain available through sendTo."
       );
     }
   }
@@ -359,18 +360,17 @@ class Siku extends utils.Adapter {
    * Starts the recurring polling timer for all configured devices.
    */
   startPolling() {
-    var _a;
     this.clearPollingTimer();
     if (this.runtimeDevices.size === 0) {
       return;
     }
-    const intervalMs = Math.max((_a = this.config.pollIntervalSec) != null ? _a : 30, 5) * 1e3;
+    const intervalMs = (0, import_siku_timer.getPollIntervalMs)(this.config.pollIntervalSec);
     this.pollIntervalHandle = this.setInterval(() => {
       this.pollDevices("interval").catch((error) => {
-        this.log.error(`Fehler beim Polling im Intervall: ${error.message}`);
+        this.log.error(`Error during interval polling: ${error.message}`);
       });
     }, intervalMs);
-    this.log.debug(`Polling gestartet: alle ${intervalMs} ms`);
+    this.log.debug(`Polling scheduled every ${intervalMs} ms`);
   }
   /**
    * Stops the recurring polling timer if it is currently active.
@@ -386,18 +386,17 @@ class Siku extends utils.Adapter {
    * of the regular polling cycle to avoid unnecessary reads of the clock parameters.
    */
   startTimeCheckScheduler() {
-    var _a;
     this.clearTimeCheckTimer();
     if (this.runtimeDevices.size === 0) {
       return;
     }
-    const intervalMs = Math.max((_a = this.config.timeCheckIntervalHours) != null ? _a : 24, 1) * 60 * 60 * 1e3;
+    const intervalMs = (0, import_siku_timer.getTimeCheckIntervalMs)(this.config.timeCheckIntervalHours);
     this.timeCheckIntervalHandle = this.setInterval(() => {
       this.runTimeChecks("interval").catch((error) => {
-        this.log.error(`Fehler bei der Zeitpr\xFCfung im Intervall: ${error.message}`);
+        this.log.error(`Error during interval time check: ${error.message}`);
       });
     }, intervalMs);
-    this.log.debug(`Zeitpr\xFCfung geplant: alle ${intervalMs} ms`);
+    this.log.debug(`Time check scheduled every ${intervalMs} ms`);
   }
   /**
    * Stops the recurring time check timer if it is currently active.
@@ -415,7 +414,7 @@ class Siku extends utils.Adapter {
    */
   async pollDevices(trigger) {
     if (this.pollCycleRunning) {
-      this.log.debug(`Polling (${trigger}) \xFCbersprungen, da bereits ein Zyklus l\xE4uft.`);
+      this.log.debug(`Polling (${trigger}) skipped because another cycle is already running.`);
       return;
     }
     this.pollCycleRunning = true;
@@ -489,22 +488,22 @@ class Siku extends utils.Adapter {
       }
       await this.setStateChangedAsync(
         `${prefix}.diagnostics.lastError`,
-        scheduleReadError ? `Zeitplan lesen: ${scheduleReadError}` : "",
+        scheduleReadError ? `Schedule read: ${scheduleReadError}` : "",
         true
       );
       if (scheduleReadError) {
         this.log.warn(
-          `Zeitplan-Lesen fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${scheduleReadError}`
+          `Schedule read failed for ${device.name} (${device.id}) via ${device.host}: ${scheduleReadError}`
         );
       }
-      this.log.debug(`Polling erfolgreich f\xFCr ${device.name} (${device.id}) via ${device.host} [${trigger}]`);
+      this.log.debug(`Polling succeeded for ${device.name} (${device.id}) via ${device.host} [${trigger}]`);
       return true;
     } catch (error) {
       const message = error.message;
       await this.setStateChangedAsync(`${prefix}.info.connection`, false, true);
       await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, message, true);
       await this.setStateChangedAsync(`${prefix}.diagnostics.pollDurationMs`, Date.now() - pollStartedMs, true);
-      this.log.warn(`Polling fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${message}`);
+      this.log.warn(`Polling failed for ${device.name} (${device.id}) via ${device.host}: ${message}`);
       return false;
     }
   }
@@ -517,7 +516,7 @@ class Siku extends utils.Adapter {
    */
   async runTimeChecks(trigger, targetDevices = Array.from(this.runtimeDevices.values())) {
     if (this.timeCheckRunning) {
-      this.log.debug(`Zeitpr\xFCfung (${trigger}) \xFCbersprungen, da bereits ein Zyklus l\xE4uft.`);
+      this.log.debug(`Time check (${trigger}) skipped because another cycle is already running.`);
       return {
         trigger,
         total: targetDevices.length,
@@ -604,7 +603,7 @@ class Siku extends utils.Adapter {
       await this.setStateChangedAsync(`${prefix}.diagnostics.clockDriftSec`, driftSec, true);
       await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, "", true);
       this.log.debug(
-        `Zeitpr\xFCfung ${device.name} (${device.id}) [${trigger}]: Drift ${driftSec}s gegen\xFCber ${referenceTime.toISOString()}`
+        `Time check ${device.name} (${device.id}) [${trigger}]: drift ${driftSec}s against ${referenceTime.toISOString()}`
       );
       if (Math.abs(driftSec) <= Math.max((_a = this.config.timeSyncThresholdSec) != null ? _a : 10, 0)) {
         return {
@@ -638,7 +637,7 @@ class Siku extends utils.Adapter {
       const syncedAtIso = syncDate.toISOString();
       await this.setTimestampStatePair(`${prefix}.diagnostics.lastTimeSync`, syncedAtIso);
       this.log.info(
-        `Zeit von ${device.name} (${device.id}) um ${driftSec}s korrigiert (${device.host}, ${syncedAtIso})`
+        `Corrected time of ${device.name} (${device.id}) by ${driftSec}s (${device.host}, ${syncedAtIso})`
       );
       return {
         deviceId: device.id,
@@ -654,10 +653,8 @@ class Siku extends utils.Adapter {
       };
     } catch (error) {
       const message = error.message;
-      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, `Zeitpr\xFCfung: ${message}`, true);
-      this.log.warn(
-        `Zeitpr\xFCfung fehlgeschlagen f\xFCr ${device.name} (${device.id}) via ${device.host}: ${message}`
-      );
+      await this.setStateChangedAsync(`${prefix}.diagnostics.lastError`, `Time check: ${message}`, true);
+      this.log.warn(`Time check failed for ${device.name} (${device.id}) via ${device.host}: ${message}`);
       return {
         deviceId: device.id,
         host: device.host,
@@ -862,11 +859,11 @@ class Siku extends utils.Adapter {
     });
     for (const channelDefinition of [
       { id: "info", name: "Information" },
-      { id: "control", name: "Steuerung" },
-      { id: "sensors", name: "Sensoren" },
-      { id: "timers", name: "Timer" },
-      { id: "schedule", name: "Zeitpl\xE4ne" },
-      { id: "diagnostics", name: "Diagnose" }
+      { id: "control", name: "Control" },
+      { id: "sensors", name: "Sensors" },
+      { id: "timers", name: "Timers" },
+      { id: "schedule", name: "Schedules" },
+      { id: "diagnostics", name: "Diagnostics" }
     ]) {
       await this.extendObjectAsync(`${prefix}.${channelDefinition.id}`, {
         type: "channel",
@@ -888,7 +885,7 @@ class Siku extends utils.Adapter {
         await this.extendObjectAsync(`${prefix}.schedule.${dayDefinition.key}.p${periodNumber}`, {
           type: "channel",
           common: {
-            name: `Periode ${periodNumber}`
+            name: `Period ${periodNumber}`
           },
           native: {}
         });
@@ -898,7 +895,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.connection`,
         common: {
-          name: "Verbunden",
+          name: "Connected",
           role: "indicator.connected",
           type: "boolean",
           read: true,
@@ -931,7 +928,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.deviceId`,
         common: {
-          name: "Konfigurierte Ger\xE4te-ID",
+          name: "Configured device ID",
           role: "text",
           type: "string",
           read: true,
@@ -942,7 +939,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.configuredType`,
         common: {
-          name: "Konfigurierter Typ",
+          name: "Configured type",
           role: "text",
           type: "string",
           read: true,
@@ -953,7 +950,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.deviceTypeCode`,
         common: {
-          name: "Ger\xE4tetyp-Code",
+          name: "Device type code",
           role: "value",
           type: "number",
           read: true,
@@ -963,7 +960,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.deviceTypeHex`,
         common: {
-          name: "Ger\xE4tetyp Hex",
+          name: "Device type hex",
           role: "text",
           type: "string",
           read: true,
@@ -974,7 +971,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.ipAddress`,
         common: {
-          name: "Gemeldete IP-Adresse",
+          name: "Reported IP address",
           role: "info.ip",
           type: "string",
           read: true,
@@ -985,7 +982,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.lastSeen`,
         common: {
-          name: "Zuletzt gesehen (UTC)",
+          name: "Last seen (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -996,7 +993,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.lastSeenLocal`,
         common: {
-          name: "Zuletzt gesehen (lokal)",
+          name: "Last seen (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1007,7 +1004,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.lastPoll`,
         common: {
-          name: "Letzter Poll-Versuch (UTC)",
+          name: "Last poll attempt (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1018,7 +1015,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.lastPollLocal`,
         common: {
-          name: "Letzter Poll-Versuch (lokal)",
+          name: "Last poll attempt (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1029,7 +1026,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.info.enabled`,
         common: {
-          name: "Aktiviert",
+          name: "Enabled",
           role: "indicator",
           type: "boolean",
           read: true,
@@ -1040,7 +1037,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.reportedDeviceId`,
         common: {
-          name: "Zuletzt gemeldete Ger\xE4te-ID",
+          name: "Last reported device ID",
           role: "text",
           type: "string",
           read: true,
@@ -1051,7 +1048,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastSuccessfulPoll`,
         common: {
-          name: "Letzter erfolgreicher Poll (UTC)",
+          name: "Last successful poll (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1062,7 +1059,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastSuccessfulPollLocal`,
         common: {
-          name: "Letzter erfolgreicher Poll (lokal)",
+          name: "Last successful poll (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1073,7 +1070,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastDiscovery`,
         common: {
-          name: "Letzte Discovery (UTC)",
+          name: "Last discovery (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1084,7 +1081,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastDiscoveryLocal`,
         common: {
-          name: "Letzte Discovery (lokal)",
+          name: "Last discovery (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1095,7 +1092,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastTimeCheck`,
         common: {
-          name: "Letzte Zeitpr\xFCfung (UTC)",
+          name: "Last time check (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1106,7 +1103,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastTimeCheckLocal`,
         common: {
-          name: "Letzte Zeitpr\xFCfung (lokal)",
+          name: "Last time check (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1117,7 +1114,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastTimeSync`,
         common: {
-          name: "Letzter Zeitsync (UTC)",
+          name: "Last time sync (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1128,7 +1125,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastTimeSyncLocal`,
         common: {
-          name: "Letzter Zeitsync (lokal)",
+          name: "Last time sync (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1139,7 +1136,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.timers.timerModeChangedAt`,
         common: {
-          name: "Letzter Wechsel Timer-Modus (UTC)",
+          name: "Last timer mode change (UTC)",
           role: "text",
           type: "string",
           read: true,
@@ -1150,7 +1147,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.timers.timerModeChangedAtLocal`,
         common: {
-          name: "Letzter Wechsel Timer-Modus (lokal)",
+          name: "Last timer mode change (local)",
           role: "text",
           type: "string",
           read: true,
@@ -1161,7 +1158,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.clockDriftSec`,
         common: {
-          name: "Uhrzeitabweichung",
+          name: "Clock drift",
           role: "value.interval",
           unit: "s",
           type: "number",
@@ -1173,7 +1170,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.lastError`,
         common: {
-          name: "Letzter Fehler",
+          name: "Last error",
           role: "text",
           type: "string",
           read: true,
@@ -1184,7 +1181,7 @@ class Siku extends utils.Adapter {
       {
         id: `${prefix}.diagnostics.pollDurationMs`,
         common: {
-          name: "Poll-Dauer",
+          name: "Poll duration",
           role: "value.interval",
           unit: "ms",
           type: "number",
@@ -1292,7 +1289,7 @@ class Siku extends utils.Adapter {
       const state = await this.getStateAsync(snapshotStateId);
       if ((state == null ? void 0 : state.val) === void 0 || state.val === null) {
         throw new Error(
-          `Zeitplan-Schreibvorgang abgebrochen: Snapshot-State "${this.namespace}.${snapshotStateId}" ist nicht vorhanden oder hat keinen Wert.`
+          `Schedule write aborted: snapshot state "${this.namespace}.${snapshotStateId}" is missing or has no value.`
         );
       }
       values[snapshotRelativeId] = state.val;
@@ -1427,7 +1424,7 @@ class Siku extends utils.Adapter {
     const enabledDevices = devices.filter((device) => device.enabled).length;
     const passwordRegistryEntries = Object.keys(this.getConfiguredPasswordRegistry()).length;
     this.log.debug(
-      `Konfiguration: ${JSON.stringify({
+      `Configuration: ${JSON.stringify({
         pollIntervalSec: this.config.pollIntervalSec,
         discoveryBroadcastAddress: this.config.discoveryBroadcastAddress,
         timeCheckIntervalHours: this.config.timeCheckIntervalHours,
