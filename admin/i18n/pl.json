@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Ustawienia adaptera SIKU",
     "pollIntervalSec": "Interwał odpytywania (sekundy)",
     "discoveryBroadcastAddress": "Adres rozgłoszeniowy do wykrywania",
     "timeCheckIntervalHours": "Sprawdzanie czasu co X godzin",
     "timeSyncThresholdSec": "Synchronizuj czas tylko przy odchyłce powyżej X sekund",
-    "configInfo": "Konfiguracja wielu urządzeń i akcje wykrywania zostaną dodane w kolejnych etapach rozwoju.",
     "discoveryInfo": "Użyj przycisku wykrywania, aby znaleźć mastery SIKU przez rozgłoszenie UDP i scalić je z tabelą urządzeń. Istniejące nazwy, flagi włączenia i dane dostępowe powiązane z ID urządzenia zostaną zachowane.",
     "discoverDevicesAction": "Identyfikuj urządzenia w sieci",
     "discoveryUpdated": "Wykrywanie zaktualizowało listę urządzeń. Zapisz konfigurację.",

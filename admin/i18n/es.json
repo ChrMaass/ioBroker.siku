@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Ajustes del adaptador SIKU",
     "pollIntervalSec": "Intervalo de consulta (segundos)",
     "discoveryBroadcastAddress": "Dirección de difusión para la detección",
     "timeCheckIntervalHours": "Comprobar la hora cada X horas",
     "timeSyncThresholdSec": "Sincronizar la hora solo con una desviación superior a X segundos",
-    "configInfo": "La configuración multidispositivo y las acciones de detección se añadirán en los próximos pasos de desarrollo.",
     "discoveryInfo": "Use el botón de detección para identificar maestros SIKU mediante difusión UDP y fusionarlos en la tabla de dispositivos. Se conservan los nombres existentes, los indicadores de activación y las credenciales basadas en el ID del dispositivo.",
     "discoverDevicesAction": "Identificar dispositivos en la red",
     "discoveryUpdated": "La detección actualizó la lista de dispositivos. Guarde la configuración.",

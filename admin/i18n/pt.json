@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Configurações do adaptador SIKU",
     "pollIntervalSec": "Intervalo de consulta (segundos)",
     "discoveryBroadcastAddress": "Endereço de broadcast para descoberta",
     "timeCheckIntervalHours": "Verificação de hora a cada X horas",
     "timeSyncThresholdSec": "Sincronizar hora apenas com desvio acima de X segundos",
-    "configInfo": "A configuração de vários dispositivos e as ações de descoberta serão adicionadas nas próximas etapas de desenvolvimento.",
     "discoveryInfo": "Use o botão de descoberta para identificar mestres SIKU via broadcast UDP e mesclá-los na tabela de dispositivos. Nomes existentes, flags de ativação e credenciais baseadas no ID do dispositivo são preservados.",
     "discoverDevicesAction": "Identificar dispositivos na rede",
     "discoveryUpdated": "A descoberta atualizou a lista de dispositivos. Salve a configuração.",

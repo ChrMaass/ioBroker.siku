@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "SIKU 适配器设置",
     "pollIntervalSec": "轮询间隔（秒）",
     "discoveryBroadcastAddress": "用于发现的广播地址",
     "timeCheckIntervalHours": "每 X 小时检查时间",
     "timeSyncThresholdSec": "仅在偏差超过 X 秒时同步时间",
-    "configInfo": "多设备配置和发现操作将在后续开发步骤中添加。",
     "discoveryInfo": "使用发现按钮通过 UDP 广播识别 SIKU 主设备并合并到设备表中。现有名称、启用标志和基于设备 ID 的凭据会被保留。",
     "discoverDevicesAction": "识别网络中的设备",
     "discoveryUpdated": "发现已更新设备列表。请保存配置。",

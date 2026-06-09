@@ -1,10 +1,8 @@
 {
-    "siku adapter settings": "Instellingen voor de SIKU-adapter",
     "pollIntervalSec": "Pollinterval (seconden)",
     "discoveryBroadcastAddress": "Broadcastadres voor detectie",
     "timeCheckIntervalHours": "Tijdcontrole elke X uur",
     "timeSyncThresholdSec": "Tijd alleen synchroniseren bij afwijking groter dan X seconden",
-    "configInfo": "Multi-device configuratie en detectieacties worden in de volgende ontwikkelstappen toegevoegd.",
     "discoveryInfo": "Gebruik de detectieknop om SIKU-masters via UDP-broadcast te vinden en samen te voegen in de apparaattabel. Bestaande namen, ingeschakeld-vlaggen en apparaat-ID-gebaseerde inloggegevens blijven behouden.",
     "discoverDevicesAction": "Apparaten in netwerk identificeren",
     "discoveryUpdated": "Detectie heeft de apparatenlijst bijgewerkt. Sla de configuratie op.",

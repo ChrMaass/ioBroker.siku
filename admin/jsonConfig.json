@@ -41,6 +41,7 @@
             "type": "number",
             "label": "timeSyncThresholdSec",
             "min": 10,
+            "max": 86400,
             "step": 1,
             "xs": 12,
             "sm": 12,

@@ -566,7 +566,6 @@ class Siku extends utils.Adapter {
    * @param trigger - Source of the time check for logging
    */
   async runTimeCheckForDevice(device, trigger) {
-    var _a;
     const checkedAt = /* @__PURE__ */ new Date();
     const checkedAtIso = checkedAt.toISOString();
     const prefix = device.objectId;
@@ -605,7 +604,7 @@ class Siku extends utils.Adapter {
       this.log.debug(
         `Time check ${device.name} (${device.id}) [${trigger}]: drift ${driftSec}s against ${referenceTime.toISOString()}`
       );
-      if (Math.abs(driftSec) <= Math.max((_a = this.config.timeSyncThresholdSec) != null ? _a : 10, 0)) {
+      if (Math.abs(driftSec) <= (0, import_siku_timer.getTimeSyncThresholdSec)(this.config.timeSyncThresholdSec)) {
         return {
           deviceId: device.id,
           host: device.host,
