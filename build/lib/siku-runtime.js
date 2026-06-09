@@ -61,7 +61,7 @@ function normalizeConfiguredDevice(device, index, passwordRegistry = void 0) {
   return {
     id,
     host,
-    name: typeof device.name === "string" && device.name.trim().length > 0 ? device.name.trim() : `L\xFCfter ${id.slice(-4)}`,
+    name: typeof device.name === "string" && device.name.trim().length > 0 ? device.name.trim() : `Fan ${id.slice(-4)}`,
     password,
     enabled,
     discoveredType,

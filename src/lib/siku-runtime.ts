@@ -87,7 +87,7 @@ export function normalizeConfiguredDevice(
         name:
             typeof device.name === 'string' && device.name.trim().length > 0
                 ? device.name.trim()
-                : `Lüfter ${id.slice(-4)}`,
+                : `Fan ${id.slice(-4)}`,
         password,
         enabled,
         discoveredType,
