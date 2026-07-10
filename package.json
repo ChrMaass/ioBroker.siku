@@ -1,6 +1,6 @@
 {
   "name": "iobroker.siku",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "ioBroker adapter for SIKU RV V2 and compatible Oxxify smart series ventilation devices",
   "author": {
     "name": "Christian Maaß",

@@ -121,8 +121,7 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-
-### **WORK IN PROGRESS**
+### 0.2.0 (2026-07-10)
 
 - Correct nested encryption and migration of per-device passwords from earlier beta versions.
 - Harden UDP response correlation and write-only reset handling to prevent stale or repeated commands.
@@ -153,20 +152,6 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 - Added Windows to the release-relevant adapter test matrix and updated CI/CD documentation.
 - Updated admin translations, js-controller minimum version and ioBroker type definitions.
 - Hardened UDP timeout handling and added timeout cleanup test coverage.
-
-### 0.1.4 (2026-04-18)
-
-- Hardened the GitHub release workflow so npm Trusted Publishing prefers GitHub OIDC over token-based npm auth
-
-### 0.1.3 (2026-04-18)
-
-- Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility
-
-### 0.1.2 (2026-04-18)
-
-- Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
-- Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
-- Added Trusted Publishing based npm CD plus automatic GitHub release notes with optional Copilot summaries
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
