@@ -18,6 +18,7 @@ function createInput(overrides = {}) {
 describe("Automatic patch release policy", () => {
     it("releases runtime source changes", () => {
         expect(evaluateAutoRelease(createInput({ changedFiles: ["src/main.ts"] })).shouldRelease).to.equal(true);
+        expect(evaluateAutoRelease(createInput({ changedFiles: ["build/main.js"] })).shouldRelease).to.equal(true);
     });
 
     it("releases runtime dependency changes but not development-only updates", () => {

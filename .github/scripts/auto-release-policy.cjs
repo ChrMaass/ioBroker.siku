@@ -50,7 +50,12 @@ function evaluateAutoRelease({
         return { shouldRelease: false, reason: 'version changed manually' };
     }
 
-    if (changedFiles.some(file => file.startsWith('src/') || file.startsWith('admin/') || file === 'main.js')) {
+    if (
+        changedFiles.some(
+            file =>
+                file.startsWith('src/') || file.startsWith('build/') || file.startsWith('admin/') || file === 'main.js',
+        )
+    ) {
         return { shouldRelease: true, reason: 'runtime source or admin assets changed' };
     }
 
