@@ -121,7 +121,7 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-### **WORK IN PROGRESS**
+### 0.2.1 (2026-07-10)
 
 - Create the localized fan-speed text state object before writing its value.
 
@@ -149,13 +149,6 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ### 0.1.6 (2026-06-05)
 
 - Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
-
-### 0.1.5 (2026-05-31)
-
-- Addressed the latest ioBroker repository checker findings for `latest` intake.
-- Added Windows to the release-relevant adapter test matrix and updated CI/CD documentation.
-- Updated admin translations, js-controller minimum version and ioBroker type definitions.
-- Hardened UDP timeout handling and added timeout cleanup test coverage.
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
