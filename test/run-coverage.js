@@ -32,7 +32,6 @@ const result = spawnSync(
             TS_NODE_PROJECT: "tsconfig.json",
         },
         stdio: "inherit",
-        shell: process.platform === "win32",
     },
 );
 

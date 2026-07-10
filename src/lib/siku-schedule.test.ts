@@ -9,6 +9,7 @@ import {
     getScheduleSnapshotStateIds,
     getScheduleStateDefinition,
     isScheduleStateId,
+    readCompleteSchedulePackets,
     shouldRefreshSchedule,
 } from './siku-schedule';
 
@@ -38,6 +39,39 @@ describe('SIKU schedule helpers', () => {
         expect(chunks[1]).to.have.lengthOf(12);
         expect(chunks[0].every(entry => (entry.requestValue?.[0] ?? 0) <= 4)).to.equal(true);
         expect(chunks[1].every(entry => (entry.requestValue?.[0] ?? 0) >= 5)).to.equal(true);
+    });
+
+    it('returns schedule packets only after every chunk was read successfully', async () => {
+        const calls: number[] = [];
+        const packets = await readCompleteSchedulePackets(parameters => {
+            calls.push(parameters.length);
+            return Promise.resolve(`packet-${calls.length}`);
+        });
+
+        expect(calls).to.deep.equal([16, 12]);
+        expect(packets).to.deep.equal(['packet-1', 'packet-2']);
+    });
+
+    it('rejects the complete schedule read instead of exposing partial packets', async () => {
+        const calls: number[] = [];
+        let returnedPackets: string[] | undefined;
+        let thrownError: Error | undefined;
+
+        try {
+            returnedPackets = await readCompleteSchedulePackets(parameters => {
+                calls.push(parameters.length);
+                if (calls.length === 2) {
+                    return Promise.reject(new Error('second chunk failed'));
+                }
+                return Promise.resolve('partial-packet');
+            });
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(calls).to.deep.equal([16, 12]);
+        expect(returnedPackets).to.equal(undefined);
+        expect(thrownError?.message).to.equal('second chunk failed');
     });
 
     it('refreshes schedules on startup, after 15 minutes, after a failed read or after clock rollback', () => {

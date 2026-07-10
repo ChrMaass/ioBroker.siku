@@ -193,6 +193,24 @@ export function buildScheduleReadRequestChunks(): SikuReadRequestEntry[][] {
     ];
 }
 
+/**
+ * Reads all schedule chunks sequentially and returns them only as one complete snapshot.
+ *
+ * Keeping the partial result local ensures callers cannot accidentally apply one half of a weekly
+ * schedule when a later UDP request fails.
+ *
+ * @param readChunk Reads one response-size-safe schedule chunk.
+ */
+export async function readCompleteSchedulePackets<T>(
+    readChunk: (parameters: SikuReadRequestEntry[]) => Promise<T>,
+): Promise<T[]> {
+    const packets: T[] = [];
+    for (const parameters of buildScheduleReadRequestChunks()) {
+        packets.push(await readChunk(parameters));
+    }
+    return packets;
+}
+
 export function shouldRefreshSchedule(
     trigger: 'startup' | 'interval',
     lastSuccessfulRefreshMs: number | undefined,

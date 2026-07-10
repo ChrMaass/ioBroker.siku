@@ -519,9 +519,9 @@ class Siku extends utils.Adapter {
           let scheduleReadError2;
           if (refreshSchedule) {
             try {
-              for (const parameters of (0, import_siku_schedule.buildScheduleReadRequestChunks)()) {
-                schedulePackets2.push(
-                  await this.enqueueNetworkOperation(
+              schedulePackets2.push(
+                ...await (0, import_siku_schedule.readCompleteSchedulePackets)(
+                  (parameters) => this.enqueueNetworkOperation(
                     () => (0, import_siku_network.readDevicePacket)({
                       host: device.host,
                       deviceId: device.id,
@@ -529,8 +529,8 @@ class Siku extends utils.Adapter {
                       parameters
                     })
                   )
-                );
-              }
+                )
+              );
             } catch (error) {
               scheduleReadError2 = error.message;
             }

@@ -32,11 +32,11 @@ import {
     type SikuDevicePasswordRegistry,
 } from './lib/siku-password-config';
 import {
-    buildScheduleReadRequestChunks,
     buildScheduleWriteRequest,
     decodeScheduleUpdates,
     getScheduleSnapshotStateIds,
     isScheduleStateId,
+    readCompleteSchedulePackets,
     shouldRefreshSchedule,
     SIKU_SCHEDULE_WRITABLE_STATE_IDS,
 } from './lib/siku-schedule';
@@ -641,9 +641,9 @@ class Siku extends utils.Adapter {
 
                     if (refreshSchedule) {
                         try {
-                            for (const parameters of buildScheduleReadRequestChunks()) {
-                                schedulePackets.push(
-                                    await this.enqueueNetworkOperation(() =>
+                            schedulePackets.push(
+                                ...(await readCompleteSchedulePackets(parameters =>
+                                    this.enqueueNetworkOperation(() =>
                                         readDevicePacket({
                                             host: device.host,
                                             deviceId: device.id,
@@ -651,8 +651,8 @@ class Siku extends utils.Adapter {
                                             parameters,
                                         }),
                                     ),
-                                );
-                            }
+                                )),
+                            );
                         } catch (error) {
                             scheduleReadError = (error as Error).message;
                         }
