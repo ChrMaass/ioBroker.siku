@@ -147,6 +147,10 @@ const SIKU_STATE_DEFINITIONS = [
     }
   },
   {
+    relativeId: "control.fanSpeedText",
+    common: { name: "Fan speed (text)", role: "text", type: "string", read: true, write: false, def: "" }
+  },
+  {
     relativeId: "timers.boostActive",
     common: { name: "Boost active", role: "indicator", type: "boolean", read: true, write: false, def: false },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_BOOST_STATUS, decode: decodeBoolean }
