@@ -157,6 +157,7 @@
     "mode": "daemon",
     "type": "climate-control",
     "compact": true,
+    "singletonHost": true,
     "messagebox": true,
     "connectionType": "local",
     "dataSource": "poll",
@@ -210,6 +211,6 @@
     "devicePasswords"
   ],
   "encryptedNative": [
-    "devicePasswords"
+    "devicePasswords.password"
   ]
 }

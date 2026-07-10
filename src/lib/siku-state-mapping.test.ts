@@ -90,6 +90,30 @@ describe('SIKU state mappings', () => {
         expect(() => buildWriteRequestForState('diagnostics.resetAlarms', false)).to.throw(
             'Button states only accept the value true',
         );
+        expect(() => buildWriteRequestForState('control.fanSpeed', 4)).to.throw(
+            'Fan speed must be one of 1, 2, 3 or 255',
+        );
+        expect(() => buildWriteRequestForState('control.fanSpeed', 254)).to.throw(
+            'Fan speed must be one of 1, 2, 3 or 255',
+        );
+
+        for (const validFanSpeed of [1, 2, 3, 255]) {
+            expect(buildWriteRequestForState('control.fanSpeed', validFanSpeed).value).to.deep.equal(
+                Buffer.from([validFanSpeed]),
+            );
+        }
+    });
+
+    it('marks W-only reset commands for send-without-echo handling', () => {
+        expect(getWritableStateDefinition('control.resetFilterTimer')?.write).to.include({
+            function: SikuFunction.Write,
+            verificationParameter: 0x0064,
+        });
+        expect(getWritableStateDefinition('diagnostics.resetAlarms')?.write).to.include({
+            function: SikuFunction.Write,
+            verificationParameter: 0x0083,
+        });
+        expect(getWritableStateDefinition('control.power')?.write?.function).to.equal(SikuFunction.ReadWrite);
     });
 
     it('decodes live 4-byte filter countdown payloads without failing the poll cycle', () => {

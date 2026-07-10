@@ -2,7 +2,13 @@ import { expect } from 'chai';
 import { formatLocalTimestamp, getLocalizedEnumStates, getLocalizedModeLabel } from './siku-display';
 
 describe('SIKU display helpers', () => {
-    it('returns localized enum labels for fan mode and timer mode', () => {
+    it('returns localized enum labels for fan speed, fan mode and timer mode', () => {
+        expect(getLocalizedEnumStates('control.fanSpeed', 'de')).to.deep.equal({
+            1: 'Stufe 1',
+            2: 'Stufe 2',
+            3: 'Stufe 3',
+            255: 'Manuelle Stufe',
+        });
         expect(getLocalizedEnumStates('control.fanMode', 'de')).to.deep.equal({
             0: 'Lüften',
             1: 'Wärmerückgewinnung',
@@ -15,6 +21,7 @@ describe('SIKU display helpers', () => {
         });
         expect(getLocalizedModeLabel('control.fanMode', 1, 'de')).to.equal('Wärmerückgewinnung');
         expect(getLocalizedModeLabel('control.timerMode', 2, 'en')).to.equal('Party mode');
+        expect(getLocalizedModeLabel('control.fanSpeed', 255, 'en')).to.equal('Manual speed');
         expect(getLocalizedModeLabel('control.timerMode', '2', 'en')).to.equal(undefined);
     });
 

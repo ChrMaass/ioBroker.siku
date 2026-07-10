@@ -24,12 +24,14 @@ The current repository state targets a feature-complete **public beta** for loca
 - Broadcast discovery in the local network
 - JSON config based admin page for multiple devices
 - Separate RTC time check every 24 hours by default
+- Restart-persistent RTC scheduling based on the last check-attempt timestamp
 - Time synchronization only when the configured drift threshold is exceeded
 - State-based control for the main operating parameters
-- Full weekly schedule mapping via ioBroker states
-- Localized enum labels for fan mode and timer mode
+- Full weekly schedule mapping via ioBroker states with packet-size-safe reads every 15 minutes
+- Localized enum labels for fan speed, fan mode and timer mode
 - Readable local timestamp companion states for poll and discovery timestamps
-- Encrypted and protected storage of configured device passwords
+- Per-device passwords encrypted at their nested config path and protected from normal config reads
+- One adapter instance per ioBroker host to avoid UDP port conflicts
 
 ## Supported core functions
 
@@ -44,6 +46,7 @@ The current repository state targets a feature-complete **public beta** for loca
   - timer mode
   - humidity setpoint
   - sensor enable flags
+- One-shot write-only reset commands with a subsequent read-back instead of unsafe retries
 - Weekly schedule structure such as:
   - `schedule.monday.p1.speed`
   - `schedule.monday.p1.endHour`
@@ -64,6 +67,8 @@ Current compatibility wording and search terms explicitly cover **Oxxify.smart 3
 
 - Manufacturer product page: [SIKU RV 50 W Pro WiFi V2](https://www.siku.at/SIKU-RV-50-W-Pro-WiFi-V2/50523)
 - Manufacturer overview: [SIKU products](https://www.siku.at/en/products/)
+- Compatible series overview: [Oxxify decentralized ventilation](https://raumluft-shop.de/lueftung/dezentrale-lueftungsanlage-mit-waermerueckgewinnung/oxxify.html)
+- Compatible product examples: [Oxxify.smart 30](https://raumluft-shop.de/oxxify-smart-30.html) and [Oxxify.smart 50](https://raumluft-shop.de/oxxify-smart-50.html)
 - Official mobile app description: [SIKU RV WIFI on the App Store](https://apps.apple.com/at/app/siku-rv-wifi/id1444515926)
 
 ## Development
@@ -76,7 +81,7 @@ Useful scripts:
 | `npm run check`      | Run type checking without building             |
 | `npm run lint`       | Run ESLint                                     |
 | `npm run test`       | Run unit and package tests                     |
-| `npm run coverage`   | Generate test coverage for TypeScript tests    |
+| `npm run coverage`   | Enforce and report TypeScript test coverage    |
 | `npm run dev-server` | Start a local ioBroker development environment |
 | `npm run release`    | Create an official release/tag via release-tooling |
 
@@ -84,12 +89,13 @@ The adapter was generated with the official ioBroker tooling and is developed in
 
 ## CI / CD
 
-- Pull requests run a lean Ubuntu smoke test after linting and type-checking.
+- Normal pull requests run a lean Ubuntu smoke test after linting, type-checking and unit coverage.
+- Dependabot pull requests run the complete supported OS/Node.js matrix before auto-merge.
 - `main` runs the release-relevant Linux/macOS/Windows matrix required for ioBroker repository intake.
 - A separate scheduled/manual Windows regression workflow remains available for additional checks because the ioBroker controller bootstrap is significantly slower there.
-- Patch versions can be bumped automatically on successful `main` runs via `.github/workflows/auto-patch-release.yml`.
+- Runtime changes can receive an automatic patch version after a successful `main` run; docs, tests, workflows and development-only dependency updates do not create empty releases.
 - Tagged releases are published to npm directly from GitHub Actions via Trusted Publishing.
-- GitHub Releases are created automatically with generated release notes; an optional Copilot summary can be prepended when the repository secret `COPILOT_GITHUB_TOKEN` is configured.
+- GitHub Releases are created automatically with generated release notes by the standard ioBroker deploy action.
 
 ## Publication readiness
 
@@ -108,7 +114,7 @@ The adapter exposes these `sendTo` commands for scripts and integrations:
 - `discover`: run UDP broadcast discovery and merge discovered devices into the adapter config.
 - `syncTimeAll`: run a manual RTC check/sync for all configured devices.
 - `syncTimeDevice`: run a manual RTC check/sync for one configured device by `deviceId`.
-- `readDevice`: read selected raw protocol parameters from one configured device for diagnostics.
+- `readDevice`: read selected raw protocol parameters from one explicitly supplied IPv4/device-ID target for diagnostics.
 
 The diagnostic `readDevice` response serializes packet metadata and returned parameter values as hex strings. Device passwords are never returned; the response only includes `passwordLength`.
 
@@ -117,6 +123,14 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 
 ### **WORK IN PROGRESS**
+
+- Correct nested encryption and migration of per-device passwords from earlier beta versions.
+- Harden UDP response correlation and write-only reset handling to prevent stale or repeated commands.
+- Restrict fan-speed writes to protocol-defined values and expose localized enum labels.
+- Persist the 24-hour RTC schedule across restarts and keep clock reads outside normal polling.
+- Split weekly schedule reads into protocol-size-safe chunks and refresh them every 15 minutes.
+- Extract the object factory and operation scheduler, expand tests and enforce coverage in CI.
+- Modernize ioBroker dependencies, release actions and automatic patch-release classification.
 
 ### 0.1.8 (2026-06-09)
 

@@ -5,6 +5,7 @@ import {
     resolveConfiguredDevicePassword,
     serializeDevicePasswordRegistry,
     stripLegacyPasswordsFromDevices,
+    prepareStoredDevicePasswords,
 } from './siku-password-config';
 
 describe('SIKU password config helpers', () => {
@@ -109,5 +110,65 @@ describe('SIKU password config helpers', () => {
                 lastSeen: '',
             },
         ]);
+    });
+
+    it('recovers legacy plaintext rows and persists every password encrypted', () => {
+        const encryptedPrefix = '$/aes-192-cbc:';
+        const result = prepareStoredDevicePasswords({
+            configuredDevices: [
+                { id: '001800354353530B', host: '192.168.55.46' },
+                { id: '004500324353530B', host: '192.168.55.116' },
+            ],
+            decryptedRegistry: [
+                { id: '001800354353530B', password: 'corrupted-runtime-value' },
+                { id: '004500324353530B', password: '4321' },
+            ],
+            storedRegistry: [
+                { id: '001800354353530B', password: '1111' },
+                { id: '004500324353530B', password: `${encryptedPrefix}already-encrypted` },
+            ],
+            decrypt: value => (value.startsWith(encryptedPrefix) ? '4321' : `invalid:${value}`),
+            encrypt: value => `${encryptedPrefix}${value}`,
+        });
+
+        expect(result.runtimeRegistry).to.deep.equal({
+            '001800354353530B': '1111',
+            '004500324353530B': '4321',
+        });
+        expect(result.storedRegistry).to.deep.equal([
+            { id: '001800354353530B', password: `${encryptedPrefix}1111` },
+            { id: '004500324353530B', password: `${encryptedPrefix}already-encrypted` },
+        ]);
+        expect(result.storageChanged).to.equal(true);
+    });
+
+    it('migrates legacy object registries and removes duplicate device rows', () => {
+        const encryptedPrefix = '$/aes-192-cbc:';
+        const result = prepareStoredDevicePasswords({
+            configuredDevices: [
+                { id: '001800354353530B', host: '192.168.55.46' },
+                { id: '001800354353530B', host: '192.168.55.46' },
+            ],
+            decryptedRegistry: {},
+            storedRegistry: { '001800354353530B': { password: '1111' } },
+            decrypt: value => value,
+            encrypt: value => `${encryptedPrefix}${value}`,
+        });
+
+        expect(result.runtimeRegistry).to.deep.equal({ '001800354353530B': '1111' });
+        expect(result.storedRegistry).to.deep.equal([{ id: '001800354353530B', password: `${encryptedPrefix}1111` }]);
+        expect(result.storageChanged).to.equal(true);
+    });
+
+    it('rejects passwords outside the protocol character set', () => {
+        expect(() =>
+            prepareStoredDevicePasswords({
+                configuredDevices: [{ id: '001800354353530B', host: '192.168.55.46' }],
+                decryptedRegistry: [{ id: '001800354353530B', password: 'bad-value!' }],
+                storedRegistry: [{ id: '001800354353530B', password: 'bad-value!' }],
+                decrypt: () => 'still-bad!',
+                encrypt: value => value,
+            }),
+        ).to.throw('No usable password found for device 001800354353530B');
     });
 });

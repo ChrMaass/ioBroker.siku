@@ -3,11 +3,13 @@ import { SikuFunction } from './siku-constants';
 import { buildPacket, parsePacket } from './siku-protocol';
 import {
     buildScheduleReadRequests,
+    buildScheduleReadRequestChunks,
     buildScheduleWriteRequest,
     decodeScheduleUpdates,
     getScheduleSnapshotStateIds,
     getScheduleStateDefinition,
     isScheduleStateId,
+    shouldRefreshSchedule,
 } from './siku-schedule';
 
 describe('SIKU schedule helpers', () => {
@@ -25,6 +27,25 @@ describe('SIKU schedule helpers', () => {
             valueSize: 2,
             requestValue: Buffer.from([0x07, 0x04]),
         });
+    });
+
+    it('splits schedule reads into two response-size-safe weekday chunks', () => {
+        const chunks = buildScheduleReadRequestChunks();
+
+        expect(chunks).to.have.lengthOf(2);
+        expect(chunks.flat()).to.deep.equal(buildScheduleReadRequests());
+        expect(chunks[0]).to.have.lengthOf(16);
+        expect(chunks[1]).to.have.lengthOf(12);
+        expect(chunks[0].every(entry => (entry.requestValue?.[0] ?? 0) <= 4)).to.equal(true);
+        expect(chunks[1].every(entry => (entry.requestValue?.[0] ?? 0) >= 5)).to.equal(true);
+    });
+
+    it('refreshes schedules on startup, after 15 minutes or after a failed prior read', () => {
+        const now = 1_000_000;
+        expect(shouldRefreshSchedule('startup', now - 1_000, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', undefined, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', now - 14 * 60 * 1000, now)).to.equal(false);
+        expect(shouldRefreshSchedule('interval', now - 15 * 60 * 1000, now)).to.equal(true);
     });
 
     it('decodes schedule entries into weekday/period states', () => {

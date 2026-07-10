@@ -37,6 +37,19 @@ const LANGUAGE_TO_LOCALE = {
   "zh-cn": "zh-CN"
 };
 const SIKU_ENUM_TRANSLATIONS = {
+  "control.fanSpeed": {
+    de: { 1: "Stufe 1", 2: "Stufe 2", 3: "Stufe 3", 255: "Manuelle Stufe" },
+    en: { 1: "Level 1", 2: "Level 2", 3: "Level 3", 255: "Manual speed" },
+    es: { 1: "Nivel 1", 2: "Nivel 2", 3: "Nivel 3", 255: "Velocidad manual" },
+    fr: { 1: "Niveau 1", 2: "Niveau 2", 3: "Niveau 3", 255: "Vitesse manuelle" },
+    it: { 1: "Livello 1", 2: "Livello 2", 3: "Livello 3", 255: "Velocit\xE0 manuale" },
+    nl: { 1: "Stand 1", 2: "Stand 2", 3: "Stand 3", 255: "Handmatige snelheid" },
+    pl: { 1: "Poziom 1", 2: "Poziom 2", 3: "Poziom 3", 255: "Pr\u0119dko\u015B\u0107 r\u0119czna" },
+    pt: { 1: "N\xEDvel 1", 2: "N\xEDvel 2", 3: "N\xEDvel 3", 255: "Velocidade manual" },
+    ru: { 1: "\u0423\u0440\u043E\u0432\u0435\u043D\u044C 1", 2: "\u0423\u0440\u043E\u0432\u0435\u043D\u044C 2", 3: "\u0423\u0440\u043E\u0432\u0435\u043D\u044C 3", 255: "\u0420\u0443\u0447\u043D\u0430\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C" },
+    uk: { 1: "\u0420\u0456\u0432\u0435\u043D\u044C 1", 2: "\u0420\u0456\u0432\u0435\u043D\u044C 2", 3: "\u0420\u0456\u0432\u0435\u043D\u044C 3", 255: "\u0420\u0443\u0447\u043D\u0430 \u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C" },
+    "zh-cn": { 1: "\u6863\u4F4D 1", 2: "\u6863\u4F4D 2", 3: "\u6863\u4F4D 3", 255: "\u624B\u52A8\u901F\u5EA6" }
+  },
   "control.fanMode": {
     de: { 0: "L\xFCften", 1: "W\xE4rmer\xFCckgewinnung", 2: "Luftzufuhr" },
     en: { 0: "Ventilation", 1: "Heat recovery", 2: "Supply air" },

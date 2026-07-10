@@ -27,6 +27,19 @@ const LANGUAGE_TO_LOCALE = {
 } as const;
 
 const SIKU_ENUM_TRANSLATIONS: Record<string, SikuLocalizedTextMap> = {
+    'control.fanSpeed': {
+        de: { 1: 'Stufe 1', 2: 'Stufe 2', 3: 'Stufe 3', 255: 'Manuelle Stufe' },
+        en: { 1: 'Level 1', 2: 'Level 2', 3: 'Level 3', 255: 'Manual speed' },
+        es: { 1: 'Nivel 1', 2: 'Nivel 2', 3: 'Nivel 3', 255: 'Velocidad manual' },
+        fr: { 1: 'Niveau 1', 2: 'Niveau 2', 3: 'Niveau 3', 255: 'Vitesse manuelle' },
+        it: { 1: 'Livello 1', 2: 'Livello 2', 3: 'Livello 3', 255: 'Velocità manuale' },
+        nl: { 1: 'Stand 1', 2: 'Stand 2', 3: 'Stand 3', 255: 'Handmatige snelheid' },
+        pl: { 1: 'Poziom 1', 2: 'Poziom 2', 3: 'Poziom 3', 255: 'Prędkość ręczna' },
+        pt: { 1: 'Nível 1', 2: 'Nível 2', 3: 'Nível 3', 255: 'Velocidade manual' },
+        ru: { 1: 'Уровень 1', 2: 'Уровень 2', 3: 'Уровень 3', 255: 'Ручная скорость' },
+        uk: { 1: 'Рівень 1', 2: 'Рівень 2', 3: 'Рівень 3', 255: 'Ручна швидкість' },
+        'zh-cn': { 1: '档位 1', 2: '档位 2', 3: '档位 3', 255: '手动速度' },
+    },
     'control.fanMode': {
         de: { 0: 'Lüften', 1: 'Wärmerückgewinnung', 2: 'Luftzufuhr' },
         en: { 0: 'Ventilation', 1: 'Heat recovery', 2: 'Supply air' },

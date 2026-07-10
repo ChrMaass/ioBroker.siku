@@ -24,7 +24,7 @@ describe('SIKU message payload validation', () => {
 
     it('rejects invalid discover payload field types early', () => {
         expect(() => normalizeDiscoverMessagePayload({ timeoutMs: '1500' })).to.throw(
-            'timeoutMs must be an integer between 1 and 9007199254740991',
+            'timeoutMs must be an integer between 1 and 2147483647',
         );
     });
 
@@ -63,6 +63,31 @@ describe('SIKU message payload validation', () => {
                 parameters: [1],
             }),
         ).to.throw('port must be an integer between 1 and 65535');
+
+        expect(() =>
+            normalizeReadDeviceMessagePayload({
+                host: 'fan.local',
+                deviceId: '001800354353530B',
+                parameters: [1],
+            }),
+        ).to.throw('host must be an IPv4 address');
+
+        expect(() =>
+            normalizeReadDeviceMessagePayload({
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                timeoutMs: 2_147_483_648,
+                parameters: [1],
+            }),
+        ).to.throw('timeoutMs must be an integer between 1 and 2147483647');
+
+        expect(() =>
+            normalizeReadDeviceMessagePayload({
+                host: '192.168.55.46',
+                deviceId: 'NOT-A-DEVICE-ID!',
+                parameters: [1],
+            }),
+        ).to.throw('deviceId must only contain hexadecimal characters');
     });
 
     it('rejects malformed discovery, read or sync payload objects', () => {

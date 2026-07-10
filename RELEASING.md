@@ -46,10 +46,9 @@ Primary references:
    - owner: `ChrMaass`
    - repository: `ioBroker.siku`
    - workflow: `test-and-release.yml`
-3. (Optional) Add a repository secret `COPILOT_GITHUB_TOKEN` with a GitHub personal access token that can use Copilot CLI. If present, the release job prepends a short Copilot-generated summary to the generated GitHub release notes.
-4. Add the documented emergency owner:
+3. Add the documented emergency owner:
    - `npm owner add bluefox iobroker.siku`
-5. Enable the repository variable `ENABLE_NPM_RELEASE=true` in GitHub.
+4. Enable the repository variable `ENABLE_NPM_RELEASE=true` in GitHub.
 
 After that, tagged releases can be published from GitHub Actions without storing a long-lived npm token.
 
@@ -61,7 +60,7 @@ variable `ENABLE_AUTO_PATCH_RELEASE=true`.
 The workflow `.github/workflows/auto-patch-release.yml` then:
 
 1. waits for a successful `Test and Release` run on `main`
-2. skips commits that already changed the version files manually
+2. classifies the tested change using `.github/scripts/auto-release-policy.cjs`
 3. runs the existing `release-script` as a patch release
 4. pushes the generated release commit and git tag back to `main`
 5. manually dispatches the trusted `test-and-release.yml` workflow for the new tag, because a tag push created by `GITHUB_TOKEN` does not start another push workflow on its own
@@ -72,26 +71,33 @@ Recommended versioning strategy for this repository:
 - use **patch versions** (`0.1.1`, `0.1.2`, …) for bug fixes and review follow-ups
 - use the first npm / `latest` submission as **`0.1.x` public beta**, not as `0.0.x`
 
+The automatic classifier creates a patch release for runtime source, Admin assets, runtime adapter
+metadata or production dependency changes. It deliberately skips release commits, manual version
+changes and changes limited to documentation, tests, workflows, lockfiles or development dependencies.
+
 ## CI strategy
 
-- Pull requests: lint + type-check + one Ubuntu smoke test for fast feedback
-- `main`: release-relevant Linux/macOS matrix
+- regular pull requests: lint + type-check + coverage + one Ubuntu smoke test for fast feedback
+- Dependabot pull requests: full supported OS/Node.js matrix before auto-merge
+- `main`: release-relevant Linux/macOS/Windows matrix
 - Windows: separate scheduled/manual regression workflow because controller bootstrap is much slower on Windows runners
-- Tags / release dispatches: publish job with trusted npm publishing, automatic GitHub release notes and an optional Copilot-generated summary
+- Tags / release dispatches: standard ioBroker deploy action with trusted npm publishing and automatic GitHub release notes
 
 This keeps day-to-day iteration fast without dropping cross-platform coverage entirely.
 
 ## Release flow for this repository
 
-1. Ensure `main` is green in GitHub Actions.
+1. Ensure the release pull request is green and reviewed.
 2. Run a dry run if needed:
-   - `npm run release patch -- --dry`
-3. Create the real release:
-   - `npm run release patch`
-4. The release script creates a git tag.
-5. GitHub Actions runs the release workflow.
-6. If trusted publishing is configured and `ENABLE_NPM_RELEASE=true`, the tag build publishes to npm.
-7. The same release job also creates a GitHub Release with automatic notes, categorized via `.github/release.yml`.
+   - `npm run release -- patch --dry --branchPattern '*'`
+3. On a release branch, create the real release commit and local tag without pushing either automatically:
+   - `npm run release -- patch --noPush --branchPattern '*'`
+4. Push the release commit to the pull-request branch, but keep the tag local until the PR is merged.
+5. Merge the reviewed PR and wait for the `main` test matrix. The manual version change makes the automatic patch classifier skip this merge.
+6. Push the already prepared tag after the tested release commit is part of `main`.
+7. GitHub Actions runs the tagged release workflow.
+8. If trusted publishing is configured and `ENABLE_NPM_RELEASE=true`, the tag build publishes to npm.
+9. The same release job also creates a GitHub Release with automatic notes, categorized via `.github/release.yml`.
 
 ## After the first npm release
 
