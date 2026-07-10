@@ -174,7 +174,7 @@ function buildScheduleReadRequestChunks() {
   ];
 }
 function shouldRefreshSchedule(trigger, lastSuccessfulRefreshMs, nowMs) {
-  return trigger === "startup" || lastSuccessfulRefreshMs === void 0 || nowMs - lastSuccessfulRefreshMs >= import_siku_constants.SIKU_SCHEDULE_REFRESH_INTERVAL_MS;
+  return trigger === "startup" || lastSuccessfulRefreshMs === void 0 || nowMs < lastSuccessfulRefreshMs || nowMs - lastSuccessfulRefreshMs >= import_siku_constants.SIKU_SCHEDULE_REFRESH_INTERVAL_MS;
 }
 function decodeScheduleUpdates(packet) {
   const updates = [];

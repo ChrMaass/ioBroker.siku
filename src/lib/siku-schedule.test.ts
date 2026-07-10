@@ -40,12 +40,13 @@ describe('SIKU schedule helpers', () => {
         expect(chunks[1].every(entry => (entry.requestValue?.[0] ?? 0) >= 5)).to.equal(true);
     });
 
-    it('refreshes schedules on startup, after 15 minutes or after a failed prior read', () => {
+    it('refreshes schedules on startup, after 15 minutes, after a failed read or after clock rollback', () => {
         const now = 1_000_000;
         expect(shouldRefreshSchedule('startup', now - 1_000, now)).to.equal(true);
         expect(shouldRefreshSchedule('interval', undefined, now)).to.equal(true);
         expect(shouldRefreshSchedule('interval', now - 14 * 60 * 1000, now)).to.equal(false);
         expect(shouldRefreshSchedule('interval', now - 15 * 60 * 1000, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', now + 1_000, now)).to.equal(true);
     });
 
     it('decodes schedule entries into weekday/period states', () => {

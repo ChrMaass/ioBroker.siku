@@ -201,6 +201,7 @@ export function shouldRefreshSchedule(
     return (
         trigger === 'startup' ||
         lastSuccessfulRefreshMs === undefined ||
+        nowMs < lastSuccessfulRefreshMs ||
         nowMs - lastSuccessfulRefreshMs >= SIKU_SCHEDULE_REFRESH_INTERVAL_MS
     );
 }

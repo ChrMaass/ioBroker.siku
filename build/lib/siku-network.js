@@ -169,7 +169,7 @@ function getParameterCounts(parameters) {
 }
 function validateResponseCorrelation(packet, host, expectedDeviceId, expectedParameters) {
   var _a;
-  if (packet.deviceIdText !== expectedDeviceId) {
+  if (packet.deviceIdText.toUpperCase() !== expectedDeviceId.toUpperCase()) {
     throw new Error(`Response from ${host} belongs to device ${packet.deviceIdText}, expected ${expectedDeviceId}`);
   }
   const expectedCounts = getParameterCounts(expectedParameters);

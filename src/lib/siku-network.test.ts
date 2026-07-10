@@ -331,6 +331,31 @@ describe('SIKU network helpers', () => {
         expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x0001]);
     });
 
+    it('correlates response device ids case-insensitively', async () => {
+        const packet = await readDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [{ parameter: 0x0001 }],
+            },
+            {
+                requestOnce: () =>
+                    Promise.resolve(
+                        buildPacket(
+                            Buffer.from('001800354353530b', 'ascii'),
+                            '1111',
+                            SikuFunction.Response,
+                            Buffer.from([0x01, 0x01]),
+                        ),
+                    ),
+            },
+        );
+
+        expect(packet.deviceIdText).to.equal('001800354353530b');
+        expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x0001]);
+    });
+
     it('sends W-only commands once with function 0x02 and without waiting for an echo', async () => {
         const sentPackets: Buffer[] = [];
 

@@ -260,7 +260,7 @@ function validateResponseCorrelation(
     expectedDeviceId: string,
     expectedParameters: readonly number[],
 ): void {
-    if (packet.deviceIdText !== expectedDeviceId) {
+    if (packet.deviceIdText.toUpperCase() !== expectedDeviceId.toUpperCase()) {
         throw new Error(`Response from ${host} belongs to device ${packet.deviceIdText}, expected ${expectedDeviceId}`);
     }
 
