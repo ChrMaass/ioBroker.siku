@@ -3,6 +3,26 @@ import { SIKU_DEFAULT_PASSWORD, SIKU_DEVICE_ID_LENGTH } from './siku-constants';
 export type SikuDevicePasswordRegistry = Record<string, string>;
 export type SikuDevicePasswordEntries = ioBroker.SikuDevicePasswordEntry[];
 
+export interface PrepareStoredDevicePasswordsOptions {
+    configuredDevices: readonly Partial<ioBroker.SikuDeviceConfig>[];
+    decryptedRegistry: unknown;
+    storedRegistry: unknown;
+    decrypt: (value: string) => string;
+    encrypt: (value: string) => string;
+}
+
+export interface PreparedStoredDevicePasswords {
+    runtimeRegistry: SikuDevicePasswordRegistry;
+    storedRegistry: SikuDevicePasswordEntries;
+    storageChanged: boolean;
+}
+
+const AES_PASSWORD_PREFIX = '$/aes-192-cbc:';
+
+function isProtocolPassword(value: unknown): value is string {
+    return typeof value === 'string' && /^[0-9A-Za-z]{1,8}$/u.test(value);
+}
+
 /**
  * Normalizes a device ID that is intended to be used as a key in the password registry.
  *
@@ -123,12 +143,110 @@ export function resolveConfiguredDevicePassword(
     const legacyPassword = getTrimmedPasswordValue(device.password);
     const resolvedPassword = registryPassword ?? legacyPassword ?? SIKU_DEFAULT_PASSWORD;
 
-    if (resolvedPassword.length > 8) {
+    if (!isProtocolPassword(resolvedPassword)) {
         const source = registryPassword ? `devicePasswords.${normalizedId}` : `devices[${index}].password`;
-        throw new Error(`${source} must be at most 8 characters long`);
+        throw new Error(`${source} must contain 1 to 8 letters or digits`);
     }
 
     return resolvedPassword;
+}
+
+function getStoredPasswordRows(registry: unknown): Map<string, string> {
+    const rows = new Map<string, string>();
+    const entries: Array<[unknown, unknown]> = Array.isArray(registry)
+        ? registry.map(entry =>
+              typeof entry === 'object' && entry !== null
+                  ? [(entry as { id?: unknown }).id, (entry as { password?: unknown }).password]
+                  : [undefined, undefined],
+          )
+        : typeof registry === 'object' && registry !== null
+          ? Object.entries(registry)
+          : [];
+
+    for (const [rawId, rawPassword] of entries) {
+        const id = normalizeDevicePasswordRegistryKey(rawId);
+        const password = getTrimmedPasswordValue(rawPassword);
+        if (id && password) {
+            rows.set(id, password);
+        }
+    }
+    return rows;
+}
+
+/**
+ * Reconciles decrypted runtime values with raw instance storage.
+ *
+ * Earlier adapter versions declared the whole object-array as `encryptedNative`. The controller
+ * cannot decrypt password properties in that shape, while migration code could also persist plain
+ * values. Raw protocol-valid values are therefore treated as legacy plaintext and encrypted once;
+ * already encrypted rows are retained byte-for-byte to avoid needless config churn.
+ *
+ * @param options - Raw storage, decrypted runtime data and controller crypto helpers
+ */
+export function prepareStoredDevicePasswords(
+    options: PrepareStoredDevicePasswordsOptions,
+): PreparedStoredDevicePasswords {
+    const decrypted = normalizeDevicePasswordRegistry(options.decryptedRegistry);
+    const storedRows = getStoredPasswordRows(options.storedRegistry);
+    const runtimeRegistry: SikuDevicePasswordRegistry = {};
+    const storedRegistry: SikuDevicePasswordEntries = [];
+
+    for (const device of options.configuredDevices) {
+        const id = normalizeDevicePasswordRegistryKey(device.id);
+        if (!id || runtimeRegistry[id] !== undefined) {
+            continue;
+        }
+
+        const storedValue = storedRows.get(id);
+        let decryptedStoredValue: string | undefined;
+        let password: string | undefined;
+
+        if (isProtocolPassword(storedValue)) {
+            password = storedValue;
+        } else if (storedValue) {
+            try {
+                const explicitlyDecrypted = options.decrypt(storedValue);
+                if (isProtocolPassword(explicitlyDecrypted)) {
+                    decryptedStoredValue = explicitlyDecrypted;
+                    password = explicitlyDecrypted;
+                }
+            } catch {
+                // Invalid legacy ciphertext is handled by the validation below.
+            }
+            password ??= isProtocolPassword(decrypted[id]) ? decrypted[id] : undefined;
+        } else if (isProtocolPassword(decrypted[id])) {
+            password = decrypted[id];
+        } else {
+            const legacyInlinePassword = getTrimmedPasswordValue(device.password);
+            password = isProtocolPassword(legacyInlinePassword) ? legacyInlinePassword : SIKU_DEFAULT_PASSWORD;
+        }
+
+        if (!password) {
+            throw new Error(`No usable password found for device ${id}`);
+        }
+
+        runtimeRegistry[id] = password;
+        storedRegistry.push({
+            id,
+            password:
+                storedValue?.startsWith(AES_PASSWORD_PREFIX) && decryptedStoredValue === password
+                    ? storedValue
+                    : options.encrypt(password),
+        });
+    }
+
+    storedRegistry.sort((left, right) => left.id.localeCompare(right.id));
+    const normalizedStoredRows = Array.from(storedRows.entries())
+        .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+        .map(([id, password]) => ({ id, password }));
+
+    return {
+        runtimeRegistry,
+        storedRegistry,
+        storageChanged:
+            !Array.isArray(options.storedRegistry) ||
+            JSON.stringify(storedRegistry) !== JSON.stringify(normalizedStoredRows),
+    };
 }
 
 /**

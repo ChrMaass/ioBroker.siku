@@ -11,6 +11,8 @@ export const SIKU_DEVICE_ID_LENGTH = 0x10;
 export const SIKU_DISCOVERY_TIMEOUT_MS = 1_500;
 export const SIKU_REQUEST_TIMEOUT_MS = 2_500;
 export const SIKU_REQUEST_RETRY_DELAYS_MS = [0, 200, 500] as const;
+/** Weekly schedules change rarely, so they are refreshed separately from the 30-second status poll. */
+export const SIKU_SCHEDULE_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 export const SIKU_DISCOVERY_PARAMETERS = [0x007c, 0x00b9] as const;
 export const SIKU_PARAMETER_POWER = 0x0001;

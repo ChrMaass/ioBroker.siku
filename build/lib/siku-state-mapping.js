@@ -119,6 +119,12 @@ function encodeIntegerRange(value, minimum, maximum, fieldName) {
   }
   return Buffer.from([value]);
 }
+function encodeFanSpeed(value) {
+  if (typeof value !== "number" || !Number.isInteger(value) || ![1, 2, 3, 255].includes(value)) {
+    throw new Error("Fan speed must be one of 1, 2, 3 or 255");
+  }
+  return Buffer.from([value]);
+}
 function getPacketEntry(packet, parameter) {
   var _a;
   return (_a = packet.entries.find((entry) => entry.parameter === parameter && !entry.unsupported)) == null ? void 0 : _a.value;
@@ -128,7 +134,7 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "control.power",
     common: { name: "Power", role: "switch", type: "boolean", read: true, write: true, def: false },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_POWER, decode: decodeBoolean },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_POWER, encode: encodeBooleanSwitch }
+    write: { parameter: import_siku_constants.SIKU_PARAMETER_POWER, encode: encodeBooleanSwitch, function: import_siku_constants.SikuFunction.ReadWrite }
   },
   {
     relativeId: "control.fanSpeed",
@@ -136,7 +142,8 @@ const SIKU_STATE_DEFINITIONS = [
     read: { parameter: import_siku_constants.SIKU_PARAMETER_FAN_SPEED, decode: import_siku_protocol.decodeUnsignedLE },
     write: {
       parameter: import_siku_constants.SIKU_PARAMETER_FAN_SPEED,
-      encode: (value) => encodeIntegerRange(value, 1, 255, "Fan speed")
+      encode: encodeFanSpeed,
+      function: import_siku_constants.SikuFunction.ReadWrite
     }
   },
   {
@@ -148,7 +155,11 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "control.timerMode",
     common: { name: "Timer mode", role: "level", type: "number", read: true, write: true, def: 0 },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_TIMER_MODE, decode: import_siku_protocol.decodeUnsignedLE },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_TIMER_MODE, encode: (value) => encodeIntegerRange(value, 0, 2, "Timer mode") }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_TIMER_MODE,
+      encode: (value) => encodeIntegerRange(value, 0, 2, "Timer mode"),
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "control.timerModeText",
@@ -165,19 +176,31 @@ const SIKU_STATE_DEFINITIONS = [
       def: false
     },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_HUMIDITY_SENSOR_ENABLED, decode: decodeBoolean },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_HUMIDITY_SENSOR_ENABLED, encode: encodeBooleanSwitch }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_HUMIDITY_SENSOR_ENABLED,
+      encode: encodeBooleanSwitch,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "control.relaySensorEnabled",
     common: { name: "Relay sensor enabled", role: "switch", type: "boolean", read: true, write: true, def: false },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_RELAY_SENSOR_ENABLED, decode: decodeBoolean },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_RELAY_SENSOR_ENABLED, encode: encodeBooleanSwitch }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_RELAY_SENSOR_ENABLED,
+      encode: encodeBooleanSwitch,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "control.analogSensorEnabled",
     common: { name: "0-10V sensor enabled", role: "switch", type: "boolean", read: true, write: true, def: false },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_ANALOG_SENSOR_ENABLED, decode: decodeBoolean },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_ANALOG_SENSOR_ENABLED, encode: encodeBooleanSwitch }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_ANALOG_SENSOR_ENABLED,
+      encode: encodeBooleanSwitch,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "control.humiditySetpoint",
@@ -195,7 +218,8 @@ const SIKU_STATE_DEFINITIONS = [
     read: { parameter: import_siku_constants.SIKU_PARAMETER_HUMIDITY_SETPOINT, decode: import_siku_protocol.decodeUnsignedLE },
     write: {
       parameter: import_siku_constants.SIKU_PARAMETER_HUMIDITY_SETPOINT,
-      encode: (value) => encodeIntegerRange(value, 40, 80, "Humidity setpoint")
+      encode: (value) => encodeIntegerRange(value, 40, 80, "Humidity setpoint"),
+      function: import_siku_constants.SikuFunction.ReadWrite
     }
   },
   {
@@ -254,7 +278,8 @@ const SIKU_STATE_DEFINITIONS = [
     read: { parameter: import_siku_constants.SIKU_PARAMETER_MANUAL_FAN_SPEED, decode: import_siku_protocol.decodeUnsignedLE },
     write: {
       parameter: import_siku_constants.SIKU_PARAMETER_MANUAL_FAN_SPEED,
-      encode: (value) => encodeIntegerRange(value, 0, 255, "Manual fan speed")
+      encode: (value) => encodeIntegerRange(value, 0, 255, "Manual fan speed"),
+      function: import_siku_constants.SikuFunction.ReadWrite
     }
   },
   {
@@ -294,7 +319,13 @@ const SIKU_STATE_DEFINITIONS = [
       write: true,
       def: false
     },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_RESET_FILTER_TIMER, encode: encodeButtonPress, isButton: true }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_RESET_FILTER_TIMER,
+      encode: encodeButtonPress,
+      isButton: true,
+      function: import_siku_constants.SikuFunction.Write,
+      verificationParameter: import_siku_constants.SIKU_PARAMETER_FILTER_COUNTDOWN
+    }
   },
   {
     relativeId: "control.boostOverrunMinutes",
@@ -312,7 +343,8 @@ const SIKU_STATE_DEFINITIONS = [
     read: { parameter: import_siku_constants.SIKU_PARAMETER_BOOST_OVERRUN_MINUTES, decode: import_siku_protocol.decodeUnsignedLE },
     write: {
       parameter: import_siku_constants.SIKU_PARAMETER_BOOST_OVERRUN_MINUTES,
-      encode: (value) => encodeIntegerRange(value, 0, 60, "Boost overrun minutes")
+      encode: (value) => encodeIntegerRange(value, 0, 60, "Boost overrun minutes"),
+      function: import_siku_constants.SikuFunction.ReadWrite
     }
   },
   {
@@ -326,7 +358,11 @@ const SIKU_STATE_DEFINITIONS = [
       def: false
     },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_TIME_CONTROLLED_OPERATION, decode: decodeBoolean },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_TIME_CONTROLLED_OPERATION, encode: encodeBooleanSwitch }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_TIME_CONTROLLED_OPERATION,
+      encode: encodeBooleanSwitch,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "info.operatingHoursMinutes",
@@ -348,7 +384,13 @@ const SIKU_STATE_DEFINITIONS = [
   {
     relativeId: "diagnostics.resetAlarms",
     common: { name: "Reset alarms", role: "button", type: "boolean", read: false, write: true, def: false },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_RESET_ALARMS, encode: encodeButtonPress, isButton: true }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_RESET_ALARMS,
+      encode: encodeButtonPress,
+      isButton: true,
+      function: import_siku_constants.SikuFunction.Write,
+      verificationParameter: import_siku_constants.SIKU_PARAMETER_ALARM_LEVEL
+    }
   },
   {
     relativeId: "diagnostics.alarmLevel",
@@ -376,7 +418,11 @@ const SIKU_STATE_DEFINITIONS = [
     relativeId: "control.fanMode",
     common: { name: "Fan mode", role: "level", type: "number", read: true, write: true, def: 0 },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_FAN_MODE, decode: import_siku_protocol.decodeUnsignedLE },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_FAN_MODE, encode: (value) => encodeIntegerRange(value, 0, 2, "Fan mode") }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_FAN_MODE,
+      encode: (value) => encodeIntegerRange(value, 0, 2, "Fan mode"),
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "control.fanModeText",
@@ -398,7 +444,8 @@ const SIKU_STATE_DEFINITIONS = [
     read: { parameter: import_siku_constants.SIKU_PARAMETER_ANALOG_SENSOR_SETPOINT, decode: import_siku_protocol.decodeUnsignedLE },
     write: {
       parameter: import_siku_constants.SIKU_PARAMETER_ANALOG_SENSOR_SETPOINT,
-      encode: (value) => encodeIntegerRange(value, 5, 100, "Analog sensor setpoint")
+      encode: (value) => encodeIntegerRange(value, 5, 100, "Analog sensor setpoint"),
+      function: import_siku_constants.SikuFunction.ReadWrite
     }
   },
   {
@@ -413,7 +460,11 @@ const SIKU_STATE_DEFINITIONS = [
       def: 0
     },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_NIGHT_TIMER_SETPOINT, decode: decodeTimerDurationMinutes },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_NIGHT_TIMER_SETPOINT, encode: encodeTimerDurationMinutes }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_NIGHT_TIMER_SETPOINT,
+      encode: encodeTimerDurationMinutes,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "timers.timerCountdownSeconds",
@@ -452,7 +503,11 @@ const SIKU_STATE_DEFINITIONS = [
       def: 0
     },
     read: { parameter: import_siku_constants.SIKU_PARAMETER_PARTY_TIMER_SETPOINT, decode: decodeTimerDurationMinutes },
-    write: { parameter: import_siku_constants.SIKU_PARAMETER_PARTY_TIMER_SETPOINT, encode: encodeTimerDurationMinutes }
+    write: {
+      parameter: import_siku_constants.SIKU_PARAMETER_PARTY_TIMER_SETPOINT,
+      encode: encodeTimerDurationMinutes,
+      function: import_siku_constants.SikuFunction.ReadWrite
+    }
   },
   {
     relativeId: "sensors.humidityAboveSetpoint",

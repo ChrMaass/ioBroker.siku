@@ -20,6 +20,7 @@ var siku_schedule_exports = {};
 __export(siku_schedule_exports, {
   SIKU_SCHEDULE_STATE_DEFINITIONS: () => SIKU_SCHEDULE_STATE_DEFINITIONS,
   SIKU_SCHEDULE_WRITABLE_STATE_IDS: () => SIKU_SCHEDULE_WRITABLE_STATE_IDS,
+  buildScheduleReadRequestChunks: () => buildScheduleReadRequestChunks,
   buildScheduleReadRequests: () => buildScheduleReadRequests,
   buildScheduleWriteRequest: () => buildScheduleWriteRequest,
   decodeScheduleUpdates: () => decodeScheduleUpdates,
@@ -27,7 +28,9 @@ __export(siku_schedule_exports, {
   getScheduleSnapshotStateIds: () => getScheduleSnapshotStateIds,
   getScheduleStateDefinition: () => getScheduleStateDefinition,
   getScheduleStateDefinitions: () => getScheduleStateDefinitions,
-  isScheduleStateId: () => isScheduleStateId
+  isScheduleStateId: () => isScheduleStateId,
+  readCompleteSchedulePackets: () => readCompleteSchedulePackets,
+  shouldRefreshSchedule: () => shouldRefreshSchedule
 });
 module.exports = __toCommonJS(siku_schedule_exports);
 var import_siku_constants = require("./siku-constants");
@@ -158,6 +161,29 @@ function buildScheduleReadRequests() {
     }))
   );
 }
+function buildScheduleReadRequestChunks() {
+  const requests = buildScheduleReadRequests();
+  return [
+    requests.filter((entry) => {
+      var _a, _b;
+      return ((_b = (_a = entry.requestValue) == null ? void 0 : _a[0]) != null ? _b : 0) <= 4;
+    }),
+    requests.filter((entry) => {
+      var _a, _b;
+      return ((_b = (_a = entry.requestValue) == null ? void 0 : _a[0]) != null ? _b : 0) >= 5;
+    })
+  ];
+}
+async function readCompleteSchedulePackets(readChunk) {
+  const packets = [];
+  for (const parameters of buildScheduleReadRequestChunks()) {
+    packets.push(await readChunk(parameters));
+  }
+  return packets;
+}
+function shouldRefreshSchedule(trigger, lastSuccessfulRefreshMs, nowMs) {
+  return trigger === "startup" || lastSuccessfulRefreshMs === void 0 || nowMs < lastSuccessfulRefreshMs || nowMs - lastSuccessfulRefreshMs >= import_siku_constants.SIKU_SCHEDULE_REFRESH_INTERVAL_MS;
+}
 function decodeScheduleUpdates(packet) {
   const updates = [];
   for (const entry of packet.entries) {
@@ -203,6 +229,7 @@ function buildScheduleWriteRequest(relativeId, values) {
 0 && (module.exports = {
   SIKU_SCHEDULE_STATE_DEFINITIONS,
   SIKU_SCHEDULE_WRITABLE_STATE_IDS,
+  buildScheduleReadRequestChunks,
   buildScheduleReadRequests,
   buildScheduleWriteRequest,
   decodeScheduleUpdates,
@@ -210,6 +237,8 @@ function buildScheduleWriteRequest(relativeId, values) {
   getScheduleSnapshotStateIds,
   getScheduleStateDefinition,
   getScheduleStateDefinitions,
-  isScheduleStateId
+  isScheduleStateId,
+  readCompleteSchedulePackets,
+  shouldRefreshSchedule
 });
 //# sourceMappingURL=siku-schedule.js.map

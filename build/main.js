@@ -33,15 +33,19 @@ var import_siku_state_mapping = require("./lib/siku-state-mapping");
 var import_siku_protocol = require("./lib/siku-protocol");
 var import_siku_time = require("./lib/siku-time");
 var import_siku_timer = require("./lib/siku-timer");
+var import_siku_time_scheduler = require("./lib/siku-time-scheduler");
+var import_siku_operation_queue = require("./lib/siku-operation-queue");
+var import_siku_objects = require("./lib/siku-objects");
 var import_siku_runtime = require("./lib/siku-runtime");
 class Siku extends utils.Adapter {
   runtimeDevices = /* @__PURE__ */ new Map();
-  deviceOperationQueues = /* @__PURE__ */ new Map();
-  networkOperationQueue = Promise.resolve();
+  operationCoordinator = new import_siku_operation_queue.SikuOperationCoordinator();
+  lastScheduleRefreshMs = /* @__PURE__ */ new Map();
+  runtimePasswordRegistry = {};
   pollCycleRunning = false;
   timeCheckRunning = false;
   pollIntervalHandle;
-  timeCheckIntervalHandle;
+  timeCheckTimeoutHandle;
   constructor(options = {}) {
     super({
       ...options,
@@ -68,7 +72,7 @@ class Siku extends utils.Adapter {
     await this.subscribeWritableStates();
     await this.pollDevices("startup");
     this.startPolling();
-    this.startTimeCheckScheduler();
+    await this.startTimeCheckScheduler();
   }
   /**
    * Is called when adapter shuts down - callback has to be called under any circumstances!
@@ -137,9 +141,47 @@ class Siku extends utils.Adapter {
     }
     const { device, relativeId, fullStateId } = resolved;
     try {
-      await this.enqueueDeviceOperation(device.id, async () => {
-        const request = (0, import_siku_schedule.isScheduleStateId)(relativeId) ? await this.buildScheduleWriteRequestForState(fullStateId, relativeId, state.val) : (0, import_siku_state_mapping.buildWriteRequestForState)(relativeId, state.val);
-        const responsePacket = await this.enqueueNetworkOperation(
+      await this.executeStateWrite(device, relativeId, fullStateId, state.val);
+      this.log.info(`Write successful: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
+    } catch (error) {
+      const message = error.message;
+      await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, `Write: ${message}`, true);
+      this.log.warn(`Write failed for ${device.id} (${relativeId}): ${message}`);
+    } finally {
+      if ((0, import_siku_state_mapping.isButtonState)(relativeId)) {
+        await this.setStateChangedAsync(fullStateId, false, true);
+      }
+    }
+  }
+  async executeStateWrite(device, relativeId, fullStateId, value) {
+    await this.enqueueDeviceOperation(device.id, async () => {
+      var _a;
+      const scheduleState = (0, import_siku_schedule.isScheduleStateId)(relativeId);
+      const request = scheduleState ? await this.buildScheduleWriteRequestForState(fullStateId, relativeId, value) : (0, import_siku_state_mapping.buildWriteRequestForState)(relativeId, value);
+      const writeDefinition = scheduleState ? void 0 : (_a = (0, import_siku_state_mapping.getWritableStateDefinition)(relativeId)) == null ? void 0 : _a.write;
+      let responsePacket;
+      if ((writeDefinition == null ? void 0 : writeDefinition.function) === import_siku_constants.SikuFunction.Write) {
+        await this.enqueueNetworkOperation(
+          () => (0, import_siku_network.sendWriteOnlyDevicePacket)({
+            host: device.host,
+            deviceId: device.id,
+            password: device.password,
+            parameters: [request]
+          })
+        );
+        if (writeDefinition.verificationParameter === void 0) {
+          throw new Error(`W-only state ${relativeId} has no verification parameter`);
+        }
+        responsePacket = await this.enqueueNetworkOperation(
+          () => (0, import_siku_network.readDevicePacket)({
+            host: device.host,
+            deviceId: device.id,
+            password: device.password,
+            parameters: [{ parameter: writeDefinition.verificationParameter }]
+          })
+        );
+      } else {
+        responsePacket = await this.enqueueNetworkOperation(
           () => (0, import_siku_network.writeDevicePacket)({
             host: device.host,
             deviceId: device.id,
@@ -147,24 +189,11 @@ class Siku extends utils.Adapter {
             parameters: [request]
           })
         );
-        const mappedUpdates = (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket);
-        const scheduleUpdates = (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket);
-        await this.applyMappedStateUpdates(device, mappedUpdates);
-        await this.applyMappedStateUpdates(device, scheduleUpdates);
-        await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, "", true);
-        if ((0, import_siku_schedule.isScheduleStateId)(relativeId)) {
-          return;
-        }
-        if ((0, import_siku_state_mapping.isButtonState)(relativeId)) {
-          await this.setStateChangedAsync(fullStateId, false, true);
-        }
-      });
-      this.log.info(`Write successful: ${device.id} -> ${relativeId} = ${JSON.stringify(state.val)}`);
-    } catch (error) {
-      const message = error.message;
-      await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, `Write: ${message}`, true);
-      this.log.warn(`Write failed for ${device.id} (${relativeId}): ${message}`);
-    }
+      }
+      await this.applyMappedStateUpdates(device, (0, import_siku_state_mapping.decodeMappedStateUpdates)(responsePacket));
+      await this.applyMappedStateUpdates(device, (0, import_siku_schedule.decodeScheduleUpdates)(responsePacket));
+      await this.setStateChangedAsync(`${device.objectId}.diagnostics.lastError`, "", true);
+    });
   }
   /**
    * Performs a network discovery using UDP broadcast, updates matching runtime devices
@@ -237,6 +266,7 @@ class Siku extends utils.Adapter {
    */
   async handleSyncTimeAllMessage(obj) {
     const summary = await this.runTimeChecks("manual");
+    await this.startTimeCheckScheduler();
     this.sendMessageResponse(obj, {
       ok: true,
       result: this.getTimeCheckResultCode(summary),
@@ -256,6 +286,7 @@ class Siku extends utils.Adapter {
       throw new Error(`Device ${payload.deviceId} is not configured in native.devices`);
     }
     const summary = await this.runTimeChecks("manual", [device]);
+    await this.startTimeCheckScheduler();
     this.sendMessageResponse(obj, {
       ok: true,
       result: this.getTimeCheckResultCode(summary),
@@ -266,7 +297,7 @@ class Siku extends utils.Adapter {
    * Returns the normalized dedicated device password registry from the current adapter config.
    */
   getConfiguredPasswordRegistry() {
-    return (0, import_siku_password_config.normalizeDevicePasswordRegistry)(this.config.devicePasswords);
+    return { ...this.runtimePasswordRegistry };
   }
   /**
    * Migrates legacy inline device passwords from `devices[].password` into the dedicated
@@ -280,31 +311,39 @@ class Siku extends utils.Adapter {
     const hadLegacyInlinePasswords = currentDevices.some(
       (device) => typeof device.password === "string" && device.password.trim().length > 0
     );
-    const rawConfiguredPasswordRegistry = this.config.devicePasswords;
-    let migratedRegistry;
-    try {
-      migratedRegistry = (0, import_siku_password_config.buildDevicePasswordRegistry)(currentDevices, rawConfiguredPasswordRegistry);
-    } catch (error) {
-      this.log.warn(`Device passwords could not be migrated automatically: ${error.message}`);
-      this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(this.getConfiguredPasswordRegistry());
-      return;
-    }
-    const normalizedCurrentRegistry = this.getConfiguredPasswordRegistry();
-    const devicesChanged = JSON.stringify(strippedDevices) !== JSON.stringify(currentDevices);
-    const registryChanged = JSON.stringify(migratedRegistry) !== JSON.stringify(normalizedCurrentRegistry);
-    const registryShapeChanged = !Array.isArray(rawConfiguredPasswordRegistry);
-    this.config.devices = strippedDevices;
-    this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(migratedRegistry);
-    if (!devicesChanged && !registryChanged && !registryShapeChanged) {
-      return;
-    }
     const instanceObjectId = `system.adapter.${this.namespace}`;
     const instanceObject = await this.getForeignObjectAsync(instanceObjectId);
+    const storedNative = instanceObject == null ? void 0 : instanceObject.native;
+    let preparedPasswords;
+    try {
+      preparedPasswords = (0, import_siku_password_config.prepareStoredDevicePasswords)({
+        configuredDevices: currentDevices,
+        decryptedRegistry: this.config.devicePasswords,
+        storedRegistry: storedNative == null ? void 0 : storedNative.devicePasswords,
+        decrypt: (value) => this.decrypt(value),
+        encrypt: (value) => this.encrypt(value)
+      });
+    } catch (error) {
+      this.log.warn(`Device passwords could not be migrated automatically: ${error.message}`);
+      this.runtimePasswordRegistry = (0, import_siku_password_config.normalizeDevicePasswordRegistry)(this.config.devicePasswords);
+      return;
+    }
+    this.runtimePasswordRegistry = preparedPasswords.runtimeRegistry;
+    const devicesChanged = JSON.stringify(strippedDevices) !== JSON.stringify(currentDevices);
+    this.config.devices = strippedDevices;
+    this.config.devicePasswords = (0, import_siku_password_config.serializeDevicePasswordRegistry)(this.runtimePasswordRegistry);
+    if (!devicesChanged && !preparedPasswords.storageChanged) {
+      return;
+    }
     if (!instanceObject) {
       this.log.warn("The adapter configuration could not be saved automatically after password migration.");
       return;
     }
-    instanceObject.native = this.buildNativeConfig(strippedDevices, migratedRegistry);
+    instanceObject.native = {
+      ...instanceObject.native,
+      ...this.buildNativeConfig(strippedDevices, this.runtimePasswordRegistry),
+      devicePasswords: preparedPasswords.storedRegistry
+    };
     await this.setForeignObjectAsync(instanceObjectId, instanceObject);
     if (hadLegacyInlinePasswords) {
       this.log.info("Device passwords were migrated to the dedicated encrypted password registry.");
@@ -385,26 +424,42 @@ class Siku extends utils.Adapter {
    * Starts the dedicated periodic RTC check scheduler. The RTC is intentionally not part
    * of the regular polling cycle to avoid unnecessary reads of the clock parameters.
    */
-  startTimeCheckScheduler() {
+  async startTimeCheckScheduler() {
     this.clearTimeCheckTimer();
-    if (this.runtimeDevices.size === 0) {
+    const enabledDevices = Array.from(this.runtimeDevices.values()).filter((device) => device.enabled);
+    if (enabledDevices.length === 0) {
       return;
     }
     const intervalMs = (0, import_siku_timer.getTimeCheckIntervalMs)(this.config.timeCheckIntervalHours);
-    this.timeCheckIntervalHandle = this.setInterval(() => {
-      this.runTimeChecks("interval").catch((error) => {
-        this.log.error(`Error during interval time check: ${error.message}`);
-      });
-    }, intervalMs);
-    this.log.debug(`Time check scheduled every ${intervalMs} ms`);
+    const persistedChecks = await Promise.all(
+      enabledDevices.map(async (device) => {
+        const state = await this.getStateAsync(`${device.objectId}.diagnostics.lastTimeCheck`);
+        return typeof (state == null ? void 0 : state.val) === "string" ? state.val : null;
+      })
+    );
+    const delayMs = (0, import_siku_time_scheduler.getNextTimeCheckDelayMs)(/* @__PURE__ */ new Date(), persistedChecks, intervalMs);
+    this.timeCheckTimeoutHandle = this.setTimeout(() => {
+      this.timeCheckTimeoutHandle = void 0;
+      void this.executeScheduledTimeCheck();
+    }, delayMs);
+    this.log.debug(`Next time check scheduled in ${delayMs} ms`);
+  }
+  async executeScheduledTimeCheck() {
+    try {
+      await this.runTimeChecks("interval");
+    } catch (error) {
+      this.log.error(`Error during interval time check: ${error.message}`);
+    } finally {
+      await this.startTimeCheckScheduler();
+    }
   }
   /**
    * Stops the recurring time check timer if it is currently active.
    */
   clearTimeCheckTimer() {
-    if (this.timeCheckIntervalHandle) {
-      this.clearInterval(this.timeCheckIntervalHandle);
-      this.timeCheckIntervalHandle = void 0;
+    if (this.timeCheckTimeoutHandle) {
+      this.clearTimeout(this.timeCheckTimeoutHandle);
+      this.timeCheckTimeoutHandle = void 0;
     }
   }
   /**
@@ -439,6 +494,7 @@ class Siku extends utils.Adapter {
     const pollStartedAtIso = pollStartedAt.toISOString();
     const pollStartedMs = Date.now();
     const prefix = device.objectId;
+    const refreshSchedule = (0, import_siku_schedule.shouldRefreshSchedule)(trigger, this.lastScheduleRefreshMs.get(device.id), Date.now());
     const basePollParameters = Array.from(/* @__PURE__ */ new Set([...import_siku_constants.SIKU_RUNTIME_POLL_PARAMETERS, ...import_siku_state_mapping.SIKU_POLL_PARAMETERS])).map(
       (parameter) => ({ parameter })
     );
@@ -448,7 +504,7 @@ class Siku extends utils.Adapter {
     }
     await this.setTimestampStatePair(`${prefix}.info.lastPoll`, pollStartedAtIso);
     try {
-      const { basePacket, schedulePacket, scheduleReadError } = await this.enqueueDeviceOperation(
+      const { basePacket, schedulePackets, scheduleReadError } = await this.enqueueDeviceOperation(
         device.id,
         async () => {
           const basePacket2 = await this.enqueueNetworkOperation(
@@ -459,23 +515,29 @@ class Siku extends utils.Adapter {
               parameters: basePollParameters
             })
           );
-          let schedulePacket2;
+          const schedulePackets2 = [];
           let scheduleReadError2;
-          try {
-            schedulePacket2 = await this.enqueueNetworkOperation(
-              () => (0, import_siku_network.readDevicePacket)({
-                host: device.host,
-                deviceId: device.id,
-                password: device.password,
-                parameters: (0, import_siku_schedule.buildScheduleReadRequests)()
-              })
-            );
-          } catch (error) {
-            scheduleReadError2 = error.message;
+          if (refreshSchedule) {
+            try {
+              schedulePackets2.push(
+                ...await (0, import_siku_schedule.readCompleteSchedulePackets)(
+                  (parameters) => this.enqueueNetworkOperation(
+                    () => (0, import_siku_network.readDevicePacket)({
+                      host: device.host,
+                      deviceId: device.id,
+                      password: device.password,
+                      parameters
+                    })
+                  )
+                )
+              );
+            } catch (error) {
+              scheduleReadError2 = error.message;
+            }
           }
           return {
             basePacket: basePacket2,
-            schedulePacket: schedulePacket2,
+            schedulePackets: schedulePackets2,
             scheduleReadError: scheduleReadError2
           };
         }
@@ -483,8 +545,13 @@ class Siku extends utils.Adapter {
       const snapshot = (0, import_siku_runtime.decodePollSnapshot)(device.id, basePacket, pollStartedAt);
       await this.applyPollSnapshot(device, snapshot, pollStartedAtIso, Date.now() - pollStartedMs);
       await this.applyMappedStateUpdates(device, (0, import_siku_state_mapping.decodeMappedStateUpdates)(basePacket));
-      if (schedulePacket) {
+      for (const schedulePacket of schedulePackets) {
         await this.applyMappedStateUpdates(device, (0, import_siku_schedule.decodeScheduleUpdates)(schedulePacket));
+      }
+      if (refreshSchedule && !scheduleReadError) {
+        const refreshedAtIso = (/* @__PURE__ */ new Date()).toISOString();
+        this.lastScheduleRefreshMs.set(device.id, Date.now());
+        await this.setTimestampStatePair(`${prefix}.diagnostics.lastScheduleRead`, refreshedAtIso);
       }
       await this.setStateChangedAsync(
         `${prefix}.diagnostics.lastError`,
@@ -569,7 +636,6 @@ class Siku extends utils.Adapter {
     const checkedAt = /* @__PURE__ */ new Date();
     const checkedAtIso = checkedAt.toISOString();
     const prefix = device.objectId;
-    await this.setTimestampStatePair(`${prefix}.diagnostics.lastTimeCheck`, checkedAtIso);
     if (!device.enabled) {
       return {
         deviceId: device.id,
@@ -584,6 +650,7 @@ class Siku extends utils.Adapter {
         syncedAt: null
       };
     }
+    await this.setTimestampStatePair(`${prefix}.diagnostics.lastTimeCheck`, checkedAtIso);
     try {
       const packet = await this.enqueueDeviceOperation(
         device.id,
@@ -753,23 +820,6 @@ class Siku extends utils.Adapter {
     );
   }
   /**
-   * Adds localized enum labels to selected object definitions so writable numeric states are
-   * shown as dropdowns with translated labels in the current ioBroker language.
-   *
-   * @param relativeId - Device-local relative state id
-   * @param common - Base ioBroker common definition
-   */
-  getLocalizedStateCommon(relativeId, common) {
-    const enumStates = (0, import_siku_display.getLocalizedEnumStates)(relativeId, this.language);
-    if (!enumStates) {
-      return common;
-    }
-    return {
-      ...common,
-      states: enumStates
-    };
-  }
-  /**
    * Writes the static metadata derived from the adapter config into the ioBroker state tree.
    *
    * @param device - Runtime device configuration
@@ -841,376 +891,12 @@ class Siku extends utils.Adapter {
     }
   }
   /**
-   * Ensures that the base object tree for one device exists.
+   * Creates the checker-compatible object tree for one configured device.
    *
-   * @param device - Runtime device configuration
+   * @param device - Normalized device whose object hierarchy should be created
    */
   async ensureDeviceObjects(device) {
-    const prefix = device.objectId;
-    await this.extendObjectAsync(prefix, {
-      type: "device",
-      common: {
-        name: device.name
-      },
-      native: {
-        deviceId: device.id
-      }
-    });
-    for (const channelDefinition of [
-      { id: "info", name: "Information" },
-      { id: "control", name: "Control" },
-      { id: "sensors", name: "Sensors" },
-      { id: "timers", name: "Timers" },
-      { id: "schedule", name: "Schedules" },
-      { id: "diagnostics", name: "Diagnostics" }
-    ]) {
-      await this.extendObjectAsync(`${prefix}.${channelDefinition.id}`, {
-        type: "channel",
-        common: {
-          name: channelDefinition.name
-        },
-        native: {}
-      });
-    }
-    for (const dayDefinition of (0, import_siku_schedule.getScheduleDayDefinitions)()) {
-      await this.extendObjectAsync(`${prefix}.schedule.${dayDefinition.key}`, {
-        type: "channel",
-        common: {
-          name: dayDefinition.name
-        },
-        native: {}
-      });
-      for (const periodNumber of [1, 2, 3, 4]) {
-        await this.extendObjectAsync(`${prefix}.schedule.${dayDefinition.key}.p${periodNumber}`, {
-          type: "channel",
-          common: {
-            name: `Period ${periodNumber}`
-          },
-          native: {}
-        });
-      }
-    }
-    const stateDefinitions = [
-      {
-        id: `${prefix}.info.connection`,
-        common: {
-          name: "Connected",
-          role: "indicator.connected",
-          type: "boolean",
-          read: true,
-          write: false,
-          def: false
-        }
-      },
-      {
-        id: `${prefix}.info.host`,
-        common: {
-          name: "Host",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.name`,
-        common: {
-          name: "Name",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.deviceId`,
-        common: {
-          name: "Configured device ID",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.configuredType`,
-        common: {
-          name: "Configured type",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.deviceTypeCode`,
-        common: {
-          name: "Device type code",
-          role: "value",
-          type: "number",
-          read: true,
-          write: false
-        }
-      },
-      {
-        id: `${prefix}.info.deviceTypeHex`,
-        common: {
-          name: "Device type hex",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.ipAddress`,
-        common: {
-          name: "Reported IP address",
-          role: "info.ip",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.lastSeen`,
-        common: {
-          name: "Last seen (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.lastSeenLocal`,
-        common: {
-          name: "Last seen (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.lastPoll`,
-        common: {
-          name: "Last poll attempt (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.lastPollLocal`,
-        common: {
-          name: "Last poll attempt (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.info.enabled`,
-        common: {
-          name: "Enabled",
-          role: "indicator",
-          type: "boolean",
-          read: true,
-          write: false,
-          def: false
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.reportedDeviceId`,
-        common: {
-          name: "Last reported device ID",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastSuccessfulPoll`,
-        common: {
-          name: "Last successful poll (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastSuccessfulPollLocal`,
-        common: {
-          name: "Last successful poll (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastDiscovery`,
-        common: {
-          name: "Last discovery (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastDiscoveryLocal`,
-        common: {
-          name: "Last discovery (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastTimeCheck`,
-        common: {
-          name: "Last time check (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastTimeCheckLocal`,
-        common: {
-          name: "Last time check (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastTimeSync`,
-        common: {
-          name: "Last time sync (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastTimeSyncLocal`,
-        common: {
-          name: "Last time sync (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.timers.timerModeChangedAt`,
-        common: {
-          name: "Last timer mode change (UTC)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.timers.timerModeChangedAtLocal`,
-        common: {
-          name: "Last timer mode change (local)",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.clockDriftSec`,
-        common: {
-          name: "Clock drift",
-          role: "value.interval",
-          unit: "s",
-          type: "number",
-          read: true,
-          write: false,
-          def: 0
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.lastError`,
-        common: {
-          name: "Last error",
-          role: "text",
-          type: "string",
-          read: true,
-          write: false,
-          def: ""
-        }
-      },
-      {
-        id: `${prefix}.diagnostics.pollDurationMs`,
-        common: {
-          name: "Poll duration",
-          role: "value.interval",
-          unit: "ms",
-          type: "number",
-          read: true,
-          write: false,
-          def: 0
-        }
-      }
-    ];
-    for (const channelId of ["info", "control", "sensors", "timers", "diagnostics"]) {
-      for (const definition of (0, import_siku_state_mapping.getStateDefinitionsByChannel)(channelId)) {
-        stateDefinitions.push({
-          id: `${prefix}.${definition.relativeId}`,
-          common: this.getLocalizedStateCommon(definition.relativeId, definition.common)
-        });
-      }
-    }
-    for (const definition of (0, import_siku_schedule.getScheduleStateDefinitions)()) {
-      stateDefinitions.push({
-        id: `${prefix}.${definition.relativeId}`,
-        common: definition.common
-      });
-    }
-    for (const stateDefinition of stateDefinitions) {
-      await this.extendObjectAsync(stateDefinition.id, {
-        type: "state",
-        common: stateDefinition.common,
-        native: {}
-      });
-    }
+    await (0, import_siku_objects.ensureSikuDeviceObjects)(this, device, this.language);
   }
   /**
    * Converts messagebox read parameter definitions into the internal request format.
@@ -1303,23 +989,7 @@ class Siku extends utils.Adapter {
    * @param operation - Async operation that should run exclusively for the device
    */
   async enqueueDeviceOperation(deviceId, operation) {
-    var _a;
-    const previous = (_a = this.deviceOperationQueues.get(deviceId)) != null ? _a : Promise.resolve();
-    const next = previous.then(
-      () => void 0,
-      () => void 0
-    ).then(() => operation());
-    const tracked = next.then(
-      () => void 0,
-      () => void 0
-    );
-    const cleanup = tracked.finally(() => {
-      if (this.deviceOperationQueues.get(deviceId) === cleanup) {
-        this.deviceOperationQueues.delete(deviceId);
-      }
-    });
-    this.deviceOperationQueues.set(deviceId, cleanup);
-    return next;
+    return this.operationCoordinator.enqueueDevice(deviceId, operation);
   }
   /**
    * Serializes UDP socket usage globally because the SIKU devices answer request traffic
@@ -1328,22 +998,7 @@ class Siku extends utils.Adapter {
    * @param operation - Async network operation that should use the shared UDP slot
    */
   async enqueueNetworkOperation(operation) {
-    const previous = this.networkOperationQueue;
-    const next = previous.then(
-      () => void 0,
-      () => void 0
-    ).then(() => operation());
-    const tracked = next.then(
-      () => void 0,
-      () => void 0
-    );
-    const cleanup = tracked.finally(() => {
-      if (this.networkOperationQueue === cleanup) {
-        this.networkOperationQueue = Promise.resolve();
-      }
-    });
-    this.networkOperationQueue = cleanup;
-    return next;
+    return this.operationCoordinator.enqueueNetwork(operation);
   }
   /**
    * Validates a read parameter identifier from a message payload.

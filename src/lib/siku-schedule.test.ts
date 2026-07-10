@@ -3,11 +3,14 @@ import { SikuFunction } from './siku-constants';
 import { buildPacket, parsePacket } from './siku-protocol';
 import {
     buildScheduleReadRequests,
+    buildScheduleReadRequestChunks,
     buildScheduleWriteRequest,
     decodeScheduleUpdates,
     getScheduleSnapshotStateIds,
     getScheduleStateDefinition,
     isScheduleStateId,
+    readCompleteSchedulePackets,
+    shouldRefreshSchedule,
 } from './siku-schedule';
 
 describe('SIKU schedule helpers', () => {
@@ -25,6 +28,59 @@ describe('SIKU schedule helpers', () => {
             valueSize: 2,
             requestValue: Buffer.from([0x07, 0x04]),
         });
+    });
+
+    it('splits schedule reads into two response-size-safe weekday chunks', () => {
+        const chunks = buildScheduleReadRequestChunks();
+
+        expect(chunks).to.have.lengthOf(2);
+        expect(chunks.flat()).to.deep.equal(buildScheduleReadRequests());
+        expect(chunks[0]).to.have.lengthOf(16);
+        expect(chunks[1]).to.have.lengthOf(12);
+        expect(chunks[0].every(entry => (entry.requestValue?.[0] ?? 0) <= 4)).to.equal(true);
+        expect(chunks[1].every(entry => (entry.requestValue?.[0] ?? 0) >= 5)).to.equal(true);
+    });
+
+    it('returns schedule packets only after every chunk was read successfully', async () => {
+        const calls: number[] = [];
+        const packets = await readCompleteSchedulePackets(parameters => {
+            calls.push(parameters.length);
+            return Promise.resolve(`packet-${calls.length}`);
+        });
+
+        expect(calls).to.deep.equal([16, 12]);
+        expect(packets).to.deep.equal(['packet-1', 'packet-2']);
+    });
+
+    it('rejects the complete schedule read instead of exposing partial packets', async () => {
+        const calls: number[] = [];
+        let returnedPackets: string[] | undefined;
+        let thrownError: Error | undefined;
+
+        try {
+            returnedPackets = await readCompleteSchedulePackets(parameters => {
+                calls.push(parameters.length);
+                if (calls.length === 2) {
+                    return Promise.reject(new Error('second chunk failed'));
+                }
+                return Promise.resolve('partial-packet');
+            });
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(calls).to.deep.equal([16, 12]);
+        expect(returnedPackets).to.equal(undefined);
+        expect(thrownError?.message).to.equal('second chunk failed');
+    });
+
+    it('refreshes schedules on startup, after 15 minutes, after a failed read or after clock rollback', () => {
+        const now = 1_000_000;
+        expect(shouldRefreshSchedule('startup', now - 1_000, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', undefined, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', now - 14 * 60 * 1000, now)).to.equal(false);
+        expect(shouldRefreshSchedule('interval', now - 15 * 60 * 1000, now)).to.equal(true);
+        expect(shouldRefreshSchedule('interval', now + 1_000, now)).to.equal(true);
     });
 
     it('decodes schedule entries into weekday/period states', () => {

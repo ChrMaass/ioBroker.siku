@@ -1,4 +1,18 @@
 # Older changelog entries
+## 0.1.4 (2026-04-18)
+
+- Hardened the GitHub release workflow so npm Trusted Publishing prefers GitHub OIDC over token-based npm auth
+
+## 0.1.3 (2026-04-18)
+
+- Normalized the GitHub repository URL metadata for npm Trusted Publishing compatibility
+
+## 0.1.2 (2026-04-18)
+
+- Prepared the adapter for ioBroker `latest` intake with encrypted config handling and cleaner CI job separation
+- Added a dedicated Windows regression workflow and a clearer public beta versioning baseline
+- Added Trusted Publishing based npm CD plus automatic GitHub release notes with optional Copilot summaries
+
 ## 0.1.1 (2026-04-18)
 
 - Cleaned up adapter-check metadata for the `latest` intake and npm follow-up release

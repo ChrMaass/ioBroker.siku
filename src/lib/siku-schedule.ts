@@ -1,4 +1,4 @@
-import { SIKU_PARAMETER_SCHEDULE } from './siku-constants';
+import { SIKU_PARAMETER_SCHEDULE, SIKU_SCHEDULE_REFRESH_INTERVAL_MS } from './siku-constants';
 import type { SikuRelativeStateUpdate } from './siku-state-mapping';
 import type { ParsedSikuPacket, SikuReadRequestEntry, SikuWriteRequestEntry } from './siku-protocol';
 
@@ -175,6 +175,52 @@ export function buildScheduleReadRequests(): SikuReadRequestEntry[] {
             valueSize: 2,
             requestValue: Buffer.from([day.number, periodNumber]),
         })),
+    );
+}
+
+/**
+ * Splits the weekly schedule into two weekday-aligned reads.
+ *
+ * A response for all 28 periods is 280 bytes on current devices, while the protocol PDF documents
+ * a 256-byte maximum packet size. Two chunks retain broad device compatibility without issuing one
+ * UDP request per weekday.
+ */
+export function buildScheduleReadRequestChunks(): SikuReadRequestEntry[][] {
+    const requests = buildScheduleReadRequests();
+    return [
+        requests.filter(entry => (entry.requestValue?.[0] ?? 0) <= 4),
+        requests.filter(entry => (entry.requestValue?.[0] ?? 0) >= 5),
+    ];
+}
+
+/**
+ * Reads all schedule chunks sequentially and returns them only as one complete snapshot.
+ *
+ * Keeping the partial result local ensures callers cannot accidentally apply one half of a weekly
+ * schedule when a later UDP request fails.
+ *
+ * @param readChunk Reads one response-size-safe schedule chunk.
+ */
+export async function readCompleteSchedulePackets<T>(
+    readChunk: (parameters: SikuReadRequestEntry[]) => Promise<T>,
+): Promise<T[]> {
+    const packets: T[] = [];
+    for (const parameters of buildScheduleReadRequestChunks()) {
+        packets.push(await readChunk(parameters));
+    }
+    return packets;
+}
+
+export function shouldRefreshSchedule(
+    trigger: 'startup' | 'interval',
+    lastSuccessfulRefreshMs: number | undefined,
+    nowMs: number,
+): boolean {
+    return (
+        trigger === 'startup' ||
+        lastSuccessfulRefreshMs === undefined ||
+        nowMs < lastSuccessfulRefreshMs ||
+        nowMs - lastSuccessfulRefreshMs >= SIKU_SCHEDULE_REFRESH_INTERVAL_MS
     );
 }
 

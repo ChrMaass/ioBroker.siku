@@ -88,6 +88,7 @@ export interface SikuNetworkDependencies {
         timeoutMs: number,
         localPort: number,
     ) => Promise<Buffer>;
+    sendOnce?: (host: string, port: number, payload: Buffer, localPort: number) => Promise<void>;
     timer?: (timeoutMs: number) => Promise<unknown>;
     getLocalIPv4Addresses?: () => Set<string>;
     now?: () => Date;
@@ -219,6 +220,59 @@ async function requestOnce(
     });
 }
 
+async function sendOnce(
+    host: string,
+    port: number,
+    payload: Buffer,
+    localPort: number = port,
+    bindRequest: (localPort: number) => Promise<SikuRequestSocket> = bindRequestSocket,
+): Promise<void> {
+    const socket = await bindRequest(localPort);
+
+    return new Promise<void>((resolve, reject) => {
+        let finished = false;
+        const finish = (error?: Error): void => {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            socket.removeAllListeners();
+            socket.close();
+            error ? reject(error) : resolve();
+        };
+
+        socket.on('error', finish);
+        socket.send(payload, port, host, error => finish(error ?? undefined));
+    });
+}
+
+function getParameterCounts(parameters: readonly number[]): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const parameter of parameters) {
+        counts.set(parameter, (counts.get(parameter) ?? 0) + 1);
+    }
+    return counts;
+}
+
+function validateResponseCorrelation(
+    packet: ParsedSikuPacket,
+    host: string,
+    expectedDeviceId: string,
+    expectedParameters: readonly number[],
+): void {
+    if (packet.deviceIdText.toUpperCase() !== expectedDeviceId.toUpperCase()) {
+        throw new Error(`Response from ${host} belongs to device ${packet.deviceIdText}, expected ${expectedDeviceId}`);
+    }
+
+    const expectedCounts = getParameterCounts(expectedParameters);
+    const actualCounts = getParameterCounts(packet.entries.map(entry => entry.parameter));
+    for (const [parameter, expectedCount] of expectedCounts) {
+        if ((actualCounts.get(parameter) ?? 0) < expectedCount) {
+            throw new Error(`Response from ${host} is missing parameter 0x${parameter.toString(16).padStart(4, '0')}`);
+        }
+    }
+}
+
 async function executeRequestWithRetries(
     host: string,
     port: number,
@@ -226,6 +280,8 @@ async function executeRequestWithRetries(
     timeoutMs: number,
     localPort: number,
     retryDelaysMs: readonly number[],
+    expectedDeviceId: string,
+    expectedParameters: readonly number[],
     dependencies: SikuNetworkDependencies,
 ): Promise<ParsedSikuPacket> {
     const request =
@@ -258,6 +314,7 @@ async function executeRequestWithRetries(
                     `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, '0')} in response from ${host}`,
                 );
             }
+            validateResponseCorrelation(parsed, host, expectedDeviceId, expectedParameters);
 
             return parsed;
         } catch (error) {
@@ -352,8 +409,8 @@ export function parseDiscoveryResponse(
     const deviceTypeEntry = parsed.entries.find(
         entry => entry.parameter === SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported,
     );
-    const deviceId = decodeAscii(idEntry?.value ?? parsed.deviceIdBytes);
-    if (!deviceId) {
+    const deviceId = decodeAscii(idEntry?.value ?? parsed.deviceIdBytes).toUpperCase();
+    if (!/^[0-9A-F]{16}$/u.test(deviceId)) {
         return null;
     }
 
@@ -386,6 +443,8 @@ export async function readDevicePacket(
         options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
         options.localPort ?? options.port ?? SIKU_DEFAULT_PORT,
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
+        options.deviceId,
+        options.parameters.map(parameter => parameter.parameter),
         dependencies,
     );
 }
@@ -409,11 +468,38 @@ export async function writeDevicePacket(
         options.timeoutMs ?? SIKU_REQUEST_TIMEOUT_MS,
         options.localPort ?? options.port ?? SIKU_DEFAULT_PORT,
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
+        options.deviceId,
+        options.parameters.map(parameter => parameter.parameter),
         dependencies,
     );
 
     validateWriteEcho(packet, options.parameters, options.host);
     return packet;
+}
+
+/**
+ * Sends a protocol function 0x02 command exactly once.
+ *
+ * W-only parameters intentionally do not return an acknowledgement. Retrying them after a timeout
+ * could repeat a destructive action, so success here only confirms that the UDP datagram was sent.
+ * Callers should verify the resulting readable status separately where possible.
+ *
+ * @param options - Target, credentials and the single write-only parameter
+ * @param dependencies - Optional test/runtime dependency overrides
+ */
+export async function sendWriteOnlyDevicePacket(
+    options: SikuWriteDeviceOptions,
+    dependencies: SikuNetworkDependencies = {},
+): Promise<void> {
+    const port = options.port ?? SIKU_DEFAULT_PORT;
+    const localPort = options.localPort ?? port;
+    const payload = buildWritePacket(options.deviceId, options.password, SikuFunction.Write, options.parameters);
+    const send =
+        dependencies.sendOnce ??
+        ((targetHost, targetPort, requestPayload, requestLocalPort) =>
+            sendOnce(targetHost, targetPort, requestPayload, requestLocalPort, dependencies.bindRequestSocket));
+
+    await send(options.host, port, payload, localPort);
 }
 
 export async function discoverDevices(

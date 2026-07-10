@@ -12,6 +12,10 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+concurrency:
+  group: auto-patch-release-main
+  cancel-in-progress: false
+
 jobs:
   auto-patch-release:
     if: |
@@ -23,7 +27,7 @@ jobs:
 
     steps:
       - name: Check out the tested main commit
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.0
         with:
           ref: main
           fetch-depth: 0
@@ -51,21 +55,15 @@ jobs:
             reason="main moved on to $current_main; skipping stale auto-release for $tested_sha"
           fi
 
-          commit_subject="$(git log -1 --pretty=%s)"
-          if [ "$should_release" = true ] && [[ "$commit_subject" == chore:\ release\ v* ]]; then
-            should_release=false
-            reason="release commit detected"
-          fi
-
           parent_sha="$(git rev-list --parents -n 1 HEAD | awk '{print $2}')"
           if [ "$should_release" = true ] && [ -n "$parent_sha" ]; then
-            changed_files="$(git diff --name-only "$parent_sha" HEAD)"
-            printf '%s\n' "$changed_files"
-
-            if printf '%s\n' "$changed_files" | grep -Eq '^(package\.json|package-lock\.json|io-package\.json|README\.md)$'; then
-              should_release=false
-              reason="version-relevant files changed manually in the tested push"
-            fi
+            policy_output="$(mktemp)"
+            GITHUB_OUTPUT="$policy_output" node .github/scripts/auto-release-policy.cjs --base "$parent_sha"
+            policy_should_release="$(sed -n 's/^should_release=//p' "$policy_output")"
+            policy_reason="$(sed -n 's/^reason=//p' "$policy_output")"
+            rm -f "$policy_output"
+            should_release="$policy_should_release"
+            reason="$policy_reason"
           fi
 
           echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
@@ -117,6 +115,7 @@ jobs:
 
       - name: Push release commit and tag
         if: steps.preflight.outputs.should_release == 'true'
+        id: push-release
         shell: bash
         run: |
           git fetch origin main --tags
@@ -125,13 +124,15 @@ jobs:
 
           if [ "$current_main" != "$tested_sha" ]; then
             echo "main moved on to $current_main; skipping stale auto-release for $tested_sha"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           git push origin HEAD:main --follow-tags
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch release publishing workflow for the new tag
-        if: steps.preflight.outputs.should_release == 'true' && vars.ENABLE_NPM_RELEASE == 'true'
+        if: steps.push-release.outputs.pushed == 'true' && vars.ENABLE_NPM_RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -32,6 +32,7 @@ __export(siku_network_exports, {
   isDiscoverySelfEcho: () => isDiscoverySelfEcho,
   parseDiscoveryResponse: () => parseDiscoveryResponse,
   readDevicePacket: () => readDevicePacket,
+  sendWriteOnlyDevicePacket: () => sendWriteOnlyDevicePacket,
   writeDevicePacket: () => writeDevicePacket
 });
 module.exports = __toCommonJS(siku_network_exports);
@@ -141,7 +142,45 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port, bin
     });
   });
 }
-async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, dependencies) {
+async function sendOnce(host, port, payload, localPort = port, bindRequest = bindRequestSocket) {
+  const socket = await bindRequest(localPort);
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const finish = (error) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      socket.removeAllListeners();
+      socket.close();
+      error ? reject(error) : resolve();
+    };
+    socket.on("error", finish);
+    socket.send(payload, port, host, (error) => finish(error != null ? error : void 0));
+  });
+}
+function getParameterCounts(parameters) {
+  var _a;
+  const counts = /* @__PURE__ */ new Map();
+  for (const parameter of parameters) {
+    counts.set(parameter, ((_a = counts.get(parameter)) != null ? _a : 0) + 1);
+  }
+  return counts;
+}
+function validateResponseCorrelation(packet, host, expectedDeviceId, expectedParameters) {
+  var _a;
+  if (packet.deviceIdText.toUpperCase() !== expectedDeviceId.toUpperCase()) {
+    throw new Error(`Response from ${host} belongs to device ${packet.deviceIdText}, expected ${expectedDeviceId}`);
+  }
+  const expectedCounts = getParameterCounts(expectedParameters);
+  const actualCounts = getParameterCounts(packet.entries.map((entry) => entry.parameter));
+  for (const [parameter, expectedCount] of expectedCounts) {
+    if (((_a = actualCounts.get(parameter)) != null ? _a : 0) < expectedCount) {
+      throw new Error(`Response from ${host} is missing parameter 0x${parameter.toString(16).padStart(4, "0")}`);
+    }
+  }
+}
+async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, expectedDeviceId, expectedParameters, dependencies) {
   var _a, _b;
   const request = (_a = dependencies.requestOnce) != null ? _a : ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort) => requestOnce(
     targetHost,
@@ -168,6 +207,7 @@ async function executeRequestWithRetries(host, port, payload, timeoutMs, localPo
           `Unexpected function code 0x${parsed.functionCode.toString(16).padStart(2, "0")} in response from ${host}`
         );
       }
+      validateResponseCorrelation(parsed, host, expectedDeviceId, expectedParameters);
       return parsed;
     } catch (error) {
       lastError = error;
@@ -226,8 +266,8 @@ function parseDiscoveryResponse(message, remoteInfo, receivedAt = /* @__PURE__ *
   const deviceTypeEntry = parsed.entries.find(
     (entry) => entry.parameter === import_siku_constants.SIKU_PARAMETER_DEVICE_TYPE && !entry.unsupported
   );
-  const deviceId = (0, import_siku_protocol.decodeAscii)((_a = idEntry == null ? void 0 : idEntry.value) != null ? _a : parsed.deviceIdBytes);
-  if (!deviceId) {
+  const deviceId = (0, import_siku_protocol.decodeAscii)((_a = idEntry == null ? void 0 : idEntry.value) != null ? _a : parsed.deviceIdBytes).toUpperCase();
+  if (!/^[0-9A-F]{16}$/u.test(deviceId)) {
     return null;
   }
   return {
@@ -249,6 +289,8 @@ async function readDevicePacket(options, dependencies = {}) {
     (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
     (_d = (_c = options.localPort) != null ? _c : options.port) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT,
     (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    options.deviceId,
+    options.parameters.map((parameter) => parameter.parameter),
     dependencies
   );
 }
@@ -262,10 +304,20 @@ async function writeDevicePacket(options, dependencies = {}) {
     (_b = options.timeoutMs) != null ? _b : import_siku_constants.SIKU_REQUEST_TIMEOUT_MS,
     (_d = (_c = options.localPort) != null ? _c : options.port) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT,
     (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
+    options.deviceId,
+    options.parameters.map((parameter) => parameter.parameter),
     dependencies
   );
   validateWriteEcho(packet, options.parameters, options.host);
   return packet;
+}
+async function sendWriteOnlyDevicePacket(options, dependencies = {}) {
+  var _a, _b, _c;
+  const port = (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT;
+  const localPort = (_b = options.localPort) != null ? _b : port;
+  const payload = (0, import_siku_protocol.buildWritePacket)(options.deviceId, options.password, import_siku_constants.SikuFunction.Write, options.parameters);
+  const send = (_c = dependencies.sendOnce) != null ? _c : ((targetHost, targetPort, requestPayload, requestLocalPort) => sendOnce(targetHost, targetPort, requestPayload, requestLocalPort, dependencies.bindRequestSocket));
+  await send(options.host, port, payload, localPort);
 }
 async function discoverDevices(options, dependencies = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
@@ -312,6 +364,7 @@ async function discoverDevices(options, dependencies = {}) {
   isDiscoverySelfEcho,
   parseDiscoveryResponse,
   readDevicePacket,
+  sendWriteOnlyDevicePacket,
   writeDevicePacket
 });
 //# sourceMappingURL=siku-network.js.map

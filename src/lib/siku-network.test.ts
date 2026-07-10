@@ -1,13 +1,14 @@
 import { EventEmitter } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { expect } from 'chai';
-import { buildDiscoveryPacket, buildPacket, decodeUnsignedLE } from './siku-protocol';
+import { buildDiscoveryPacket, buildPacket, decodeUnsignedLE, parsePacket } from './siku-protocol';
 import { SikuFunction } from './siku-constants';
 import {
     discoverDevices,
     isDiscoverySelfEcho,
     parseDiscoveryResponse,
     readDevicePacket,
+    sendWriteOnlyDevicePacket,
     writeDevicePacket,
 } from './siku-network';
 
@@ -97,6 +98,22 @@ describe('SIKU network helpers', () => {
         });
     });
 
+    it('normalizes lowercase discovery device ids to uppercase', () => {
+        const response = buildPacket(
+            '001800354353530b',
+            '',
+            SikuFunction.Response,
+            Buffer.concat([
+                Buffer.from([0xfe, 0x02, 0xb9, 0x0e, 0x00, 0xfe, 0x10, 0x7c]),
+                Buffer.from('001800354353530b', 'ascii'),
+            ]),
+        );
+
+        expect(parseDiscoveryResponse(response, { address: '192.168.55.46', port: 4000 })?.deviceId).to.equal(
+            '001800354353530B',
+        );
+    });
+
     it('ignores discovery packets with invalid checksums, malformed packets or unexpected function codes', () => {
         const validPacket = Buffer.from(discoveryResponseHex, 'hex');
         const invalidChecksumPacket = Buffer.from(validPacket);
@@ -123,6 +140,19 @@ describe('SIKU network helpers', () => {
         ).to.equal(null);
         expect(
             parseDiscoveryResponse(Buffer.from('FDFD02', 'hex'), {
+                address: '192.168.55.46',
+                port: 4000,
+            }),
+        ).to.equal(null);
+
+        const invalidDeviceIdPacket = buildPacket(
+            Buffer.from('NOT-A-DEVICE-ID!', 'ascii'),
+            '',
+            SikuFunction.Response,
+            Buffer.from([0xfe, 0x10, 0x7c, ...Buffer.from('NOT-A-DEVICE-ID!', 'ascii')]),
+        );
+        expect(
+            parseDiscoveryResponse(invalidDeviceIdPacket, {
                 address: '192.168.55.46',
                 port: 4000,
             }),
@@ -253,6 +283,101 @@ describe('SIKU network helpers', () => {
         expect(waitCalls).to.deep.equal([200]);
         expect(packet.checksumValid).to.equal(true);
         expect(packet.functionCode).to.equal(SikuFunction.Response);
+    });
+
+    it('rejects stale responses with a different device id or parameter set', async () => {
+        const responses = [
+            buildPacket(
+                Buffer.from('004500324353530B', 'ascii'),
+                '1111',
+                SikuFunction.Response,
+                Buffer.from([0x01, 0x01]),
+            ),
+            buildPacket(
+                Buffer.from('001800354353530B', 'ascii'),
+                '1111',
+                SikuFunction.Response,
+                Buffer.from([0x02, 0x03]),
+            ),
+            buildPacket(
+                Buffer.from('001800354353530B', 'ascii'),
+                '1111',
+                SikuFunction.Response,
+                Buffer.from([0x01, 0x01]),
+            ),
+        ];
+        const waits: number[] = [];
+        let callCount = 0;
+
+        const packet = await readDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [{ parameter: 0x0001 }],
+            },
+            {
+                requestOnce: () => Promise.resolve(responses[callCount++]),
+                timer: delay => {
+                    waits.push(delay);
+                    return Promise.resolve();
+                },
+            },
+        );
+
+        expect(callCount).to.equal(3);
+        expect(waits).to.deep.equal([200, 500]);
+        expect(packet.deviceIdText).to.equal('001800354353530B');
+        expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x0001]);
+    });
+
+    it('correlates response device ids case-insensitively', async () => {
+        const packet = await readDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [{ parameter: 0x0001 }],
+            },
+            {
+                requestOnce: () =>
+                    Promise.resolve(
+                        buildPacket(
+                            Buffer.from('001800354353530b', 'ascii'),
+                            '1111',
+                            SikuFunction.Response,
+                            Buffer.from([0x01, 0x01]),
+                        ),
+                    ),
+            },
+        );
+
+        expect(packet.deviceIdText).to.equal('001800354353530b');
+        expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x0001]);
+    });
+
+    it('sends W-only commands once with function 0x02 and without waiting for an echo', async () => {
+        const sentPackets: Buffer[] = [];
+
+        await sendWriteOnlyDevicePacket(
+            {
+                host: '192.168.55.46',
+                deviceId: '001800354353530B',
+                password: '1111',
+                parameters: [{ parameter: 0x0080, value: [0x01] }],
+            },
+            {
+                sendOnce: (_host, _port, payload) => {
+                    sentPackets.push(Buffer.from(payload));
+                    return Promise.resolve();
+                },
+            },
+        );
+
+        expect(sentPackets).to.have.lengthOf(1);
+        const packet = parsePacket(sentPackets[0]);
+        expect(packet.functionCode).to.equal(SikuFunction.Write);
+        expect(packet.entries.map(entry => entry.parameter)).to.deep.equal([0x0080]);
     });
 
     it('rejects unanswered UDP requests after the configured timeout and cleans up the socket', async () => {

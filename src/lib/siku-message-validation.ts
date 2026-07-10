@@ -1,4 +1,6 @@
+import { isIPv4 } from 'node:net';
 import { SIKU_DEVICE_ID_LENGTH } from './siku-constants';
+import { SIKU_NODEJS_MAX_TIMER_MS } from './siku-timer';
 
 /**
  * Normalized payload for the broadcast based discovery command.
@@ -106,6 +108,30 @@ function getRequiredStringField(
     return value;
 }
 
+function getOptionalIPv4Field(payload: Record<string, unknown>, fieldName: string): string | undefined {
+    const value = getOptionalStringField(payload, fieldName);
+    if (value !== undefined && !isIPv4(value)) {
+        throw new Error(`${fieldName} must be an IPv4 address`);
+    }
+    return value;
+}
+
+function getOptionalPasswordField(payload: Record<string, unknown>): string | undefined {
+    const password = getOptionalStringField(payload, 'password', { maxLength: 8 });
+    if (password !== undefined && !/^[0-9A-Za-z]+$/u.test(password)) {
+        throw new Error('password may only contain letters and digits');
+    }
+    return password;
+}
+
+function getDeviceIdField(payload: Record<string, unknown>): string {
+    const deviceId = getRequiredStringField(payload, 'deviceId', { exactLength: SIKU_DEVICE_ID_LENGTH }).toUpperCase();
+    if (!/^[0-9A-F]+$/u.test(deviceId)) {
+        throw new Error('deviceId must only contain hexadecimal characters');
+    }
+    return deviceId;
+}
+
 /**
  * Reads an optional integer field and validates the accepted numeric range.
  *
@@ -140,9 +166,9 @@ export function normalizeDiscoverMessagePayload(message: unknown): DiscoverMessa
     const payload = getObjectPayload(message, 'discover');
 
     return {
-        broadcastAddress: getOptionalStringField(payload, 'broadcastAddress'),
-        password: getOptionalStringField(payload, 'password', { maxLength: 8 }),
-        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, Number.MAX_SAFE_INTEGER),
+        broadcastAddress: getOptionalIPv4Field(payload, 'broadcastAddress'),
+        password: getOptionalPasswordField(payload),
+        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, SIKU_NODEJS_MAX_TIMER_MS),
         preferredBindPort: getOptionalIntegerField(payload, 'preferredBindPort', 0, 65535),
     };
 }
@@ -163,11 +189,11 @@ export function normalizeReadDeviceMessagePayload(message: unknown): ReadDeviceM
     }
 
     return {
-        host: getRequiredStringField(payload, 'host'),
-        deviceId: getRequiredStringField(payload, 'deviceId', { exactLength: SIKU_DEVICE_ID_LENGTH }),
-        password: getOptionalStringField(payload, 'password', { maxLength: 8 }),
+        host: getOptionalIPv4Field(payload, 'host') ?? getRequiredStringField(payload, 'host'),
+        deviceId: getDeviceIdField(payload),
+        password: getOptionalPasswordField(payload),
         port: getOptionalIntegerField(payload, 'port', 1, 65535),
-        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, Number.MAX_SAFE_INTEGER),
+        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, SIKU_NODEJS_MAX_TIMER_MS),
         parameters,
     };
 }
@@ -181,6 +207,6 @@ export function normalizeSyncTimeDeviceMessagePayload(message: unknown): SyncTim
     const payload = getObjectPayload(message, 'syncTimeDevice');
 
     return {
-        deviceId: getRequiredStringField(payload, 'deviceId', { exactLength: SIKU_DEVICE_ID_LENGTH }).toUpperCase(),
+        deviceId: getDeviceIdField(payload),
     };
 }

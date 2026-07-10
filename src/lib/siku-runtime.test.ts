@@ -84,7 +84,7 @@ describe('SIKU runtime helpers', () => {
                     '001800354353530B': '123456789',
                 },
             ),
-        ).to.throw('devicePasswords.001800354353530B must be at most 8 characters long');
+        ).to.throw('devicePasswords.001800354353530B must contain 1 to 8 letters or digits');
     });
 
     it('decodes IPv4 values when the payload length is correct', () => {
