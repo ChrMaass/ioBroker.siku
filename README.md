@@ -121,6 +121,10 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+### **WORK IN PROGRESS**
+
+- Create the localized fan-speed text state object before writing its value.
+
 ### 0.2.0 (2026-07-10)
 
 - Correct nested encryption and migration of per-device passwords from earlier beta versions.
