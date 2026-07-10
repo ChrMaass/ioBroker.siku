@@ -1,6 +1,7 @@
 "use strict";
 
 const { expect } = require("chai");
+const fs = require("node:fs");
 const { evaluateAutoRelease } = require("../.github/scripts/auto-release-policy.cjs");
 
 function createInput(overrides = {}) {
@@ -16,6 +17,14 @@ function createInput(overrides = {}) {
 }
 
 describe("Automatic patch release policy", () => {
+    it("persists the changelog placeholder generated after the release commit", () => {
+        const workflow = fs.readFileSync(".github/workflows/auto-patch-release.yml", "utf8");
+
+        expect(workflow).to.include("Persist the generated changelog placeholder");
+        expect(workflow).to.include("git diff --quiet -- README.md");
+        expect(workflow).to.include('git commit -m "docs: restore changelog placeholder"');
+    });
+
     it("releases runtime source changes", () => {
         expect(evaluateAutoRelease(createInput({ changedFiles: ["src/main.ts"] })).shouldRelease).to.equal(true);
         expect(evaluateAutoRelease(createInput({ changedFiles: ["build/main.js"] })).shouldRelease).to.equal(true);

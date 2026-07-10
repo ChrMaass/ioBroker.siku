@@ -104,6 +104,18 @@ jobs:
         if: steps.preflight.outputs.should_release == 'true'
         run: npx release-script patch --config /tmp/releaseconfig.auto.json --yes --noPush --noWorkflowCheck --addPlaceholder
 
+      - name: Persist the generated changelog placeholder
+        if: steps.preflight.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          # release-script adds the next WORK IN PROGRESS placeholder after creating
+          # the release commit. Preserve that post-commit change in a small follow-up
+          # commit so the next automatic release still has a valid changelog anchor.
+          if ! git diff --quiet -- README.md; then
+            git add README.md
+            git commit -m "docs: restore changelog placeholder"
+          fi
+
       - name: Capture release metadata
         if: steps.preflight.outputs.should_release == 'true'
         id: release
