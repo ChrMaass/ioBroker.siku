@@ -36,6 +36,18 @@ describe('SIKU object factory', () => {
             3: 'Stufe 3',
             255: 'Manuelle Stufe',
         });
+        const fanSpeedTextObject = objects.find(entry => entry.id.endsWith('.control.fanSpeedText'))?.object;
+        expect(fanSpeedTextObject).to.deep.include({
+            type: 'state',
+            common: {
+                name: 'Fan speed (text)',
+                role: 'text',
+                type: 'string',
+                read: true,
+                write: false,
+                def: '',
+            },
+        });
         expect(objects.some(entry => entry.id.endsWith('.diagnostics.lastScheduleReadLocal'))).to.equal(true);
     });
 });
