@@ -208,7 +208,8 @@
     }
   ],
   "protectedNative": [
-    "devicePasswords"
+    "devicePasswords",
+    "devicePasswords.password"
   ],
   "encryptedNative": [
     "devicePasswords.password"

@@ -58,7 +58,7 @@ jobs:
           parent_sha="$(git rev-list --parents -n 1 HEAD | awk '{print $2}')"
           if [ "$should_release" = true ] && [ -n "$parent_sha" ]; then
             policy_output="$(mktemp)"
-            GITHUB_OUTPUT="$policy_output" node .github/scripts/auto-release-policy.cjs --base "$parent_sha"
+            node .github/scripts/auto-release-policy.cjs --base "$parent_sha" --output "$policy_output"
             policy_should_release="$(sed -n 's/^should_release=//p' "$policy_output")"
             policy_reason="$(sed -n 's/^reason=//p' "$policy_output")"
             rm -f "$policy_output"

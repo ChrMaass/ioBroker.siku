@@ -83,8 +83,7 @@ function readJsonAtRevision(revision, file) {
     return JSON.parse(execFileSync('git', ['show', `${revision}:${file}`], { encoding: 'utf8' }));
 }
 
-function writeGithubOutput(result) {
-    const output = process.env.GITHUB_OUTPUT;
+function writeGithubOutput(result, output) {
     if (!output) {
         return;
     }
@@ -94,8 +93,12 @@ function writeGithubOutput(result) {
 function runCli() {
     const baseIndex = process.argv.indexOf('--base');
     const base = baseIndex >= 0 ? process.argv[baseIndex + 1] : undefined;
+    const outputIndex = process.argv.indexOf('--output');
+    const output = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
     if (!base) {
-        throw new Error('Usage: node .github/scripts/auto-release-policy.cjs --base <git-revision>');
+        throw new Error(
+            'Usage: node .github/scripts/auto-release-policy.cjs --base <git-revision> [--output <output-file>]',
+        );
     }
 
     const changedFiles = execFileSync('git', ['diff', '--name-only', base, 'HEAD'], { encoding: 'utf8' })
@@ -111,7 +114,7 @@ function runCli() {
     });
 
     console.log(`${result.shouldRelease ? 'release' : 'skip'}: ${result.reason}`);
-    writeGithubOutput(result);
+    writeGithubOutput(result, output);
 }
 
 module.exports = { evaluateAutoRelease, stripReleaseManagedIoPackageFields };

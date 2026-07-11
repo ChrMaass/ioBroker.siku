@@ -18,6 +18,27 @@ function createInput(overrides = {}) {
 }
 
 describe("Automatic patch release policy", () => {
+    it("keeps CI output handling compatible with compact mode", () => {
+        const script = fs.readFileSync(
+            path.join(__dirname, "..", ".github/scripts/auto-release-policy.cjs"),
+            "utf8",
+        );
+        const workflow = fs.readFileSync(
+            path.join(__dirname, "..", ".github/workflows/auto-patch-release.yml"),
+            "utf8",
+        );
+
+        expect(script).to.not.include("process.env");
+        expect(workflow).to.include('--output "$policy_output"');
+    });
+
+    it("uses the recommended deployment action major version", () => {
+        const workflow = fs.readFileSync(path.join(__dirname, "..", ".github/workflows/test-and-release.yml"), "utf8");
+
+        expect(workflow).to.include("ioBroker/testing-action-deploy@v1");
+        expect(workflow).to.not.include("ioBroker/testing-action-deploy@v1.");
+    });
+
     it("persists the changelog placeholder generated after the release commit", () => {
         const workflow = fs.readFileSync(path.join(__dirname, "..", ".github/workflows/auto-patch-release.yml"), "utf8");
 
