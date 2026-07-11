@@ -35,7 +35,7 @@ describe("Automatic patch release policy", () => {
     it("uses the recommended deployment action major version", () => {
         const workflow = fs.readFileSync(path.join(__dirname, "..", ".github/workflows/test-and-release.yml"), "utf8");
 
-        expect(workflow).to.include("ioBroker/testing-action-deploy@v1\n");
+        expect(workflow).to.include("ioBroker/testing-action-deploy@v1");
         expect(workflow).to.not.include("ioBroker/testing-action-deploy@v1.");
     });
 
