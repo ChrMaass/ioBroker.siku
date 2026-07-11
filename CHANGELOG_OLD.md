@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.1.6 (2026-06-05)
+
+- Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
+
 ## 0.1.5 (2026-05-31)
 
 - Addressed the latest ioBroker repository checker findings for `latest` intake.

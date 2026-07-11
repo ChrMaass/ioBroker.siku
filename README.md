@@ -121,7 +121,7 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-### **WORK IN PROGRESS**
+### 0.2.2 (2026-07-11)
 
 - Harden repository-checker compatibility for nested password protection, compact-mode CI scripts and release recovery.
 
@@ -149,10 +149,6 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 
 - Converted runtime logs and ioBroker object labels to English for repository review compliance.
 - Added Node.js-safe upper bounds for configurable polling and RTC check intervals while keeping automatic RTC checks at a 24-hour minimum.
-
-### 0.1.6 (2026-06-05)
-
-- Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 

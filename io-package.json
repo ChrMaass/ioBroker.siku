@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "news": {
+      "0.2.2": {
+        "en": "Harden repository-checker compatibility for nested password protection, compact-mode CI scripts and release recovery.",
+        "de": "Verbesserung der Kompatibilität zwischen Repository und Prüfprogramm für verschachtelten Passwortschutz, CI-Skripte im Kompaktmodus und Release-Wiederherstellung.",
+        "ru": "Укрепить совместимость средства проверки репозитория с защитой от вложенных паролей, скриптами CI в компактном режиме и восстановлением релизов.",
+        "pt": "Reforçar a compatibilidade do verificador de repositório para proteção de senhas aninhadas, scripts de CI em modo compacto e recuperação de versões.",
+        "nl": "Verbeter de compatibiliteit van de repositorychecker voor geneste wachtwoordbeveiliging, CI-scripts in compacte modus en herstel van releases.",
+        "fr": "Renforcer la compatibilité du vérificateur de dépôt pour la protection par mot de passe imbriqué, les scripts CI en mode compact et la récupération des versions.",
+        "it": "Rafforzare la compatibilità del repository-checker per la protezione con password annidate, gli script CI in modalità compatta e il ripristino delle release.",
+        "es": "Refuerza la compatibilidad del verificador de repositorios para la protección de contraseñas anidadas, los scripts de CI en modo compacto y la recuperación de versiones.",
+        "pl": "Zwiększona zgodność modułu sprawdzającego repozytorium w celu zapewnienia zagnieżdżonej ochrony hasłem, skryptów CI w trybie kompaktowym i odzyskiwania wersji.",
+        "uk": "Посилено сумісність перевірки репозиторію для вкладеного захисту паролем, компактних сценаріїв неперервної взаємодії та відновлення релізу.",
+        "zh-cn": "加强存储库检查器对嵌套密码保护、紧凑模式 CI 脚本和发布恢复的兼容性。"
+      },
       "0.2.1": {
         "en": "Create the localized fan-speed text state object before writing its value.",
         "de": "Erstellen Sie das lokalisierte Textzustandsobjekt für die Lüfterdrehzahl, bevor Sie dessen Wert schreiben.",
@@ -80,19 +93,6 @@
         "pl": "Usunięto uwagi ioBroker Repository Checker, zaktualizowano macierz CI i tłumaczenia oraz wzmocniono obsługę timeoutów UDP.",
         "uk": "Виправлено зауваження ioBroker Repository Checker, оновлено CI-матрицю й переклади та посилено обробку UDP-тайм-аутів.",
         "zh-cn": "修复 ioBroker Repository Checker 提示，更新 CI 矩阵和翻译，并强化 UDP 超时处理。"
-      },
-      "0.1.4": {
-        "en": "Prepared the 0.1.4 release with the cleaned password registry, object-structure review artifacts and an ioBroker-compliant release workflow",
-        "de": "Den Release 0.1.4 mit bereinigter Passwort-Registry, Objektstruktur-Artefakten für das Review und einem ioBroker-konformen Release-Workflow vorbereitet",
-        "ru": "Подготовлен релиз 0.1.4 с очищенным реестром паролей, артефактами структуры объектов для ревью и workflow релиза по стандарту ioBroker",
-        "pt": "Preparada a versão 0.1.4 com o registro de senhas reorganizado, artefatos da estrutura de objetos para revisão e um workflow de release compatível com o ioBroker",
-        "nl": "Release 0.1.4 voorbereid met opgeschoonde wachtwoordregistry, objectstructuur-artefacten voor de review en een ioBroker-conforme releaseworkflow",
-        "fr": "Préparation de la version 0.1.4 avec un registre des mots de passe nettoyé, des artefacts de structure d’objets pour la revue et un workflow de release conforme à ioBroker",
-        "it": "Preparata la versione 0.1.4 con il registro password ripulito, gli artefatti della struttura oggetti per la review e un workflow di release conforme a ioBroker",
-        "es": "Preparada la versión 0.1.4 con el registro de contraseñas depurado, artefactos de estructura de objetos para la revisión y un flujo de publicación conforme a ioBroker",
-        "pl": "Przygotowano wydanie 0.1.4 z uporządkowanym rejestrem haseł, artefaktami struktury obiektów do przeglądu i workflow wydawniczym zgodnym z ioBroker",
-        "uk": "Підготовлено реліз 0.1.4 з очищеним реєстром паролів, артефактами структури об’єктів для рев’ю та workflow релізу відповідно до стандартів ioBroker",
-        "zh-cn": "已为 0.1.4 版本做好准备，包括清理后的密码注册表、用于审核的对象结构产物以及符合 ioBroker 标准的发布工作流"
       }
     },
     "titleLang": {
