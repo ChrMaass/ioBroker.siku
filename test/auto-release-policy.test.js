@@ -50,7 +50,7 @@ describe("Automatic patch release policy", () => {
     it("recovers pending runtime changes after a failed automatic release", () => {
         const workflow = fs.readFileSync(path.join(__dirname, "..", ".github/workflows/auto-patch-release.yml"), "utf8");
 
-        expect(workflow).to.include('release_tag="v$(node -p "require(\'./package.json\').version")"');
+        expect(workflow).to.include("release_tag=\"v$(node -p 'require(\"./package.json\").version')\"");
         expect(workflow).to.include("git fetch origin main --tags");
         expect(workflow).to.include('git rev-list -n 1 "$release_tag"');
         expect(workflow).to.include('echo "Auto-release comparison base: $release_base ($release_tag)"');

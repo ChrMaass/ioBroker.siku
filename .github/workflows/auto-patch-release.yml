@@ -58,7 +58,7 @@ jobs:
           # Compare against the commit of the currently published version rather
           # than only HEAD^, so a corrected changelog commit can recover a release
           # that previously failed after runtime changes had already reached main.
-          release_tag="v$(node -p "require('./package.json').version")"
+          release_tag="v$(node -p 'require("./package.json").version')"
           release_base="$(git rev-list -n 1 "$release_tag" 2>/dev/null || true)"
           if [ -z "$release_base" ]; then
             release_base="$(git rev-list --parents -n 1 HEAD | awk '{print $2}')"
