@@ -1,4 +1,11 @@
 # Older changelog entries
+## 0.1.5 (2026-05-31)
+
+- Addressed the latest ioBroker repository checker findings for `latest` intake.
+- Added Windows to the release-relevant adapter test matrix and updated CI/CD documentation.
+- Updated admin translations, js-controller minimum version and ioBroker type definitions.
+- Hardened UDP timeout handling and added timeout cleanup test coverage.
+
 ## 0.1.4 (2026-04-18)
 
 - Hardened the GitHub release workflow so npm Trusted Publishing prefers GitHub OIDC over token-based npm auth

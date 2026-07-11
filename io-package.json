@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "Create the localized fan-speed text state object before writing its value.",
+        "de": "Erstellen Sie das lokalisierte Textzustandsobjekt für die Lüfterdrehzahl, bevor Sie dessen Wert schreiben.",
+        "ru": "Перед записью значения создайте локализованный объект состояния текстового описания скорости вращения вентилятора.",
+        "pt": "Crie o objeto de estado de texto localizado da velocidade do ventilador antes de escrever seu valor.",
+        "nl": "Maak het gelokaliseerde tekstobject voor de ventilatorsnelheid aan voordat u de waarde ervan opslaat.",
+        "fr": "Créez l'objet d'état de texte localisé de la vitesse du ventilateur avant d'écrire sa valeur.",
+        "it": "Creare l'oggetto di stato del testo localizzato della velocità della ventola prima di scriverne il valore.",
+        "es": "Cree el objeto de estado de texto de velocidad del ventilador localizado antes de escribir su valor.",
+        "pl": "Utwórz obiekt stanu tekstu zlokalizowanej prędkości wentylatora przed zapisaniem jego wartości.",
+        "uk": "Створіть локалізований текстовий об'єкт стану швидкості вентилятора, перш ніж записувати його значення.",
+        "zh-cn": "在写入值之前，请先创建本地化的风扇速度文本状态对象。"
+      },
       "0.2.0": {
         "en": "Correct nested encryption and migration of per-device passwords from earlier beta versions.\nHarden UDP response correlation and write-only reset handling to prevent stale or repeated commands.\nRestrict fan-speed writes to protocol-defined values and expose localized enum labels.\nPersist the 24-hour RTC schedule across restarts and keep clock reads outside normal polling.\nSplit weekly schedule reads into protocol-size-safe chunks and refresh them every 15 minutes.\nExtract the object factory and operation scheduler, expand tests and enforce coverage in CI.\nModernize ioBroker dependencies, release actions and automatic patch-release classification.",
         "de": "Korrekte verschachtelte Verschlüsselung und Migration gerätespezifischer Passwörter aus früheren Betaversionen.\nDie Korrelation von UDP-Antworten und die Behandlung von Schreib-Resets wurden verstärkt, um veraltete oder wiederholte Befehle zu verhindern.\nBeschränken Sie die Schreibvorgänge für die Lüftergeschwindigkeit auf protokolldefinierte Werte und stellen Sie lokalisierte Enum-Bezeichnungen bereit.\nDen 24-Stunden-RTC-Zeitplan auch nach Neustarts beibehalten und die Uhrzeit außerhalb der normalen Abfrageintervalle erfassen.\nTeilen Sie die wöchentlichen Lesevorgänge in protokollgerechte Abschnitte auf und aktualisieren Sie diese alle 15 Minuten.\nExtrahieren Sie die Objektfabrik und den Operationsplaner, erweitern Sie die Tests und erzwingen Sie die Testabdeckung in der CI-Pipeline.\nModernisierung der ioBroker-Abhängigkeiten, Release-Aktionen und automatischen Patch-Release-Klassifizierung.",
@@ -80,19 +93,6 @@
         "pl": "Przygotowano wydanie 0.1.4 z uporządkowanym rejestrem haseł, artefaktami struktury obiektów do przeglądu i workflow wydawniczym zgodnym z ioBroker",
         "uk": "Підготовлено реліз 0.1.4 з очищеним реєстром паролів, артефактами структури об’єктів для рев’ю та workflow релізу відповідно до стандартів ioBroker",
         "zh-cn": "已为 0.1.4 版本做好准备，包括清理后的密码注册表、用于审核的对象结构产物以及符合 ioBroker 标准的发布工作流"
-      },
-      "0.1.1": {
-        "en": "Adapter-check metadata cleanup for latest intake and npm publication follow-up",
-        "de": "Bereinigung der Adapter-Check-Metadaten für die latest-Aufnahme und den npm-Folge-Release",
-        "ru": "Очистка метаданных для проверки адаптера перед включением в latest и последующим npm-релизом",
-        "pt": "Limpeza de metadados para a verificação do adaptador visando a inclusão em latest e o release npm subsequente",
-        "nl": "Opschonen van adapter-check metadata voor opname in latest en de daaropvolgende npm-release",
-        "fr": "Nettoyage des métadonnées pour la vérification de l’adaptateur avant l’intégration dans latest et la publication npm suivante",
-        "it": "Pulizia dei metadati per il controllo dell’adattatore in vista dell’inclusione in latest e della successiva pubblicazione npm",
-        "es": "Limpieza de metadatos para la comprobación del adaptador de cara a la inclusión en latest y la siguiente publicación en npm",
-        "pl": "Porządkowanie metadanych dla kontroli adaptera przed dodaniem do latest i kolejną publikacją w npm",
-        "uk": "Очищення метаданих для перевірки адаптера перед додаванням до latest і наступним релізом в npm",
-        "zh-cn": "为 latest 收录和后续 npm 发布清理适配器检查元数据"
       }
     },
     "titleLang": {
