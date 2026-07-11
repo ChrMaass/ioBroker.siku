@@ -121,6 +121,8 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+### **WORK IN PROGRESS**
+
 ### 0.2.2 (2026-07-11)
 
 - Harden repository-checker compatibility for nested password protection, compact-mode CI scripts and release recovery.
