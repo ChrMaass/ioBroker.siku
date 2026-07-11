@@ -123,6 +123,8 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 ### **WORK IN PROGRESS**
 
+- Harden repository-checker compatibility for nested password protection, compact-mode CI scripts and release recovery.
+
 ### 0.2.1 (2026-07-10)
 
 - Create the localized fan-speed text state object before writing its value.

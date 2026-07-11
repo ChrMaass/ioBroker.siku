@@ -47,6 +47,16 @@ describe("Automatic patch release policy", () => {
         expect(workflow).to.include('git commit -m "docs: restore changelog placeholder"');
     });
 
+    it("recovers pending runtime changes after a failed automatic release", () => {
+        const workflow = fs.readFileSync(path.join(__dirname, "..", ".github/workflows/auto-patch-release.yml"), "utf8");
+
+        expect(workflow).to.include("release_tag=\"v$(node -p 'require(\"./package.json\").version')\"");
+        expect(workflow).to.include("git fetch origin main --tags");
+        expect(workflow).to.include('git rev-list -n 1 "$release_tag"');
+        expect(workflow).to.include('echo "Auto-release comparison base: $release_base ($release_tag)"');
+        expect(workflow).to.include('auto-release-policy.cjs --base "$release_base"');
+    });
+
     it("releases runtime source changes", () => {
         expect(evaluateAutoRelease(createInput({ changedFiles: ["src/main.ts"] })).shouldRelease).to.equal(true);
         expect(evaluateAutoRelease(createInput({ changedFiles: ["build/main.js"] })).shouldRelease).to.equal(true);
