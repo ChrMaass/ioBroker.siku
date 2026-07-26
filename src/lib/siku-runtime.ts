@@ -50,11 +50,13 @@ function getTrimmedString(value: unknown, fieldName: string): string {
  * @param device - Raw device entry from the adapter config
  * @param index - Index inside `native.devices`
  * @param passwordRegistry - Dedicated device password registry from `native.devicePasswords`
+ * @param unavailablePasswordDeviceIds - Device ids with an unreadable stored credential
  */
 export function normalizeConfiguredDevice(
     device: Partial<ioBroker.SikuDeviceConfig> | null | undefined,
     index: number,
     passwordRegistry: ioBroker.SikuDevicePasswordRegistry | undefined = undefined,
+    unavailablePasswordDeviceIds: ReadonlySet<string> = new Set(),
 ): SikuRuntimeDeviceConfig {
     if (typeof device !== 'object' || device === null) {
         throw new Error(`devices[${index}] must be an object`);
@@ -74,7 +76,12 @@ export function normalizeConfiguredDevice(
     }
     const discoveredType = typeof device.discoveredType === 'string' ? device.discoveredType.trim() : '';
     const lastSeen = typeof device.lastSeen === 'string' ? device.lastSeen : '';
-    const password = resolveConfiguredDevicePassword(device, index, normalizeDevicePasswordRegistry(passwordRegistry));
+    const password = resolveConfiguredDevicePassword(
+        device,
+        index,
+        normalizeDevicePasswordRegistry(passwordRegistry),
+        unavailablePasswordDeviceIds,
+    );
 
     const enabled = device.enabled === undefined ? true : device.enabled;
     if (typeof enabled !== 'boolean') {
@@ -127,7 +134,7 @@ export function decodePollSnapshot(
     const deviceTypeEntry = getPacketEntry(packet, SIKU_PARAMETER_DEVICE_TYPE);
     const ipAddressEntry = getPacketEntry(packet, SIKU_PARAMETER_IP_ADDRESS);
 
-    const reportedDeviceId = decodeAscii(idEntry?.value ?? packet.deviceIdBytes);
+    const reportedDeviceId = decodeAscii(idEntry?.value ?? packet.deviceIdBytes).toUpperCase();
     if (!reportedDeviceId) {
         throw new Error('Device response did not contain a usable device ID');
     }

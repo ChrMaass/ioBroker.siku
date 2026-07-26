@@ -3,14 +3,23 @@
  */
 export const SIKU_DEFAULT_PORT = 4000;
 export const SIKU_DEFAULT_PASSWORD = '1111';
+export const SIKU_DEFAULT_BROADCAST_ADDRESS = '255.255.255.255';
 export const SIKU_DEFAULT_DEVICE_ID = 'DEFAULT_DEVICEID';
 export const SIKU_PACKET_PREFIX = Buffer.from([0xfd, 0xfd]);
 export const SIKU_PROTOCOL_TYPE = 0x02;
 export const SIKU_DEVICE_ID_LENGTH = 0x10;
 
 export const SIKU_DISCOVERY_TIMEOUT_MS = 1_500;
+/** Keep a caller-supplied discovery window from blocking the shared UDP queue indefinitely. */
+export const SIKU_DISCOVERY_MAX_TIMEOUT_MS = 10_000;
+/** Bound the number of credentials sent during one broadcast discovery window. */
+export const SIKU_DISCOVERY_MAX_PASSWORDS = 16;
 export const SIKU_REQUEST_TIMEOUT_MS = 2_500;
 export const SIKU_REQUEST_RETRY_DELAYS_MS = [0, 200, 500] as const;
+/** Avoid hot-looping when an overdue RTC check is temporarily blocked by another check. */
+export const SIKU_TIME_CHECK_BUSY_RETRY_MS = 60_000;
+/** Prevent malformed packets from creating unbounded diagnostic state values. */
+export const SIKU_DIAGNOSTIC_ERROR_MAX_LENGTH = 1_024;
 /** Weekly schedules change rarely, so they are refreshed separately from the 30-second status poll. */
 export const SIKU_SCHEDULE_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 

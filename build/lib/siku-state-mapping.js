@@ -22,6 +22,7 @@ __export(siku_state_mapping_exports, {
   SIKU_STATE_DEFINITIONS: () => SIKU_STATE_DEFINITIONS,
   SIKU_WRITABLE_STATE_IDS: () => SIKU_WRITABLE_STATE_IDS,
   buildWriteRequestForState: () => buildWriteRequestForState,
+  decodeMappedStateResult: () => decodeMappedStateResult,
   decodeMappedStateUpdates: () => decodeMappedStateUpdates,
   getStateDefinitionsByChannel: () => getStateDefinitionsByChannel,
   getWritableStateDefinition: () => getWritableStateDefinition,
@@ -550,8 +551,9 @@ function getWritableStateDefinition(relativeId) {
 function getStateDefinitionsByChannel(channelId) {
   return SIKU_STATE_DEFINITIONS.filter((definition) => definition.relativeId.startsWith(`${channelId}.`));
 }
-function decodeMappedStateUpdates(packet) {
+function decodeMappedStateResult(packet) {
   const updates = [];
+  const errors = [];
   for (const definition of SIKU_STATE_DEFINITIONS) {
     if (!definition.read) {
       continue;
@@ -560,12 +562,23 @@ function decodeMappedStateUpdates(packet) {
     if (!value) {
       continue;
     }
-    updates.push({
-      relativeId: definition.relativeId,
-      value: definition.read.decode(value)
-    });
+    try {
+      updates.push({
+        relativeId: definition.relativeId,
+        value: definition.read.decode(value)
+      });
+    } catch (error) {
+      errors.push({
+        parameter: definition.read.parameter,
+        relativeId: definition.relativeId,
+        message: error.message
+      });
+    }
   }
-  return updates;
+  return { updates, errors };
+}
+function decodeMappedStateUpdates(packet) {
+  return decodeMappedStateResult(packet).updates;
 }
 function buildWriteRequestForState(relativeId, value) {
   const definition = getWritableStateDefinition(relativeId);
@@ -587,6 +600,7 @@ function isButtonState(relativeId) {
   SIKU_STATE_DEFINITIONS,
   SIKU_WRITABLE_STATE_IDS,
   buildWriteRequestForState,
+  decodeMappedStateResult,
   decodeMappedStateUpdates,
   getStateDefinitionsByChannel,
   getWritableStateDefinition,

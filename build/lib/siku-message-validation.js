@@ -59,8 +59,20 @@ function getRequiredStringField(payload, fieldName, options = {}) {
   return value;
 }
 function getOptionalIPv4Field(payload, fieldName) {
-  const value = getOptionalStringField(payload, fieldName);
+  var _a;
+  const rawValue = payload[fieldName];
+  if (typeof rawValue === "string" && rawValue.trim().length === 0) {
+    return void 0;
+  }
+  const value = (_a = getOptionalStringField(payload, fieldName)) == null ? void 0 : _a.trim();
   if (value !== void 0 && !(0, import_node_net.isIPv4)(value)) {
+    throw new Error(`${fieldName} must be an IPv4 address`);
+  }
+  return value;
+}
+function getRequiredIPv4Field(payload, fieldName) {
+  const value = getRequiredStringField(payload, fieldName).trim();
+  if (!(0, import_node_net.isIPv4)(value)) {
     throw new Error(`${fieldName} must be an IPv4 address`);
   }
   return value;
@@ -94,12 +106,11 @@ function normalizeDiscoverMessagePayload(message) {
   return {
     broadcastAddress: getOptionalIPv4Field(payload, "broadcastAddress"),
     password: getOptionalPasswordField(payload),
-    timeoutMs: getOptionalIntegerField(payload, "timeoutMs", 1, import_siku_timer.SIKU_NODEJS_MAX_TIMER_MS),
+    timeoutMs: getOptionalIntegerField(payload, "timeoutMs", 1, import_siku_constants.SIKU_DISCOVERY_MAX_TIMEOUT_MS),
     preferredBindPort: getOptionalIntegerField(payload, "preferredBindPort", 0, 65535)
   };
 }
 function normalizeReadDeviceMessagePayload(message) {
-  var _a;
   const payload = getObjectPayload(message, "readDevice");
   const parameters = payload.parameters;
   if (!Array.isArray(parameters)) {
@@ -109,7 +120,7 @@ function normalizeReadDeviceMessagePayload(message) {
     throw new Error("parameters must not be empty");
   }
   return {
-    host: (_a = getOptionalIPv4Field(payload, "host")) != null ? _a : getRequiredStringField(payload, "host"),
+    host: getRequiredIPv4Field(payload, "host"),
     deviceId: getDeviceIdField(payload),
     password: getOptionalPasswordField(payload),
     port: getOptionalIntegerField(payload, "port", 1, 65535),
