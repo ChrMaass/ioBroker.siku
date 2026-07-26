@@ -128,7 +128,7 @@ guard for configuration handling, not a security boundary against malicious code
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-### **WORK IN PROGRESS**
+### 0.2.3 (2026-07-26)
 
 - Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and
   password/object lifecycle behavior.
@@ -156,11 +156,6 @@ guard for configuration handling, not a security boundary against malicious code
 - Cleaned up unused Admin translations found during the adapter checklist review.
 - Documented the advanced messagebox commands for script/integration use.
 - Added a code-side upper bound for the RTC time sync drift threshold.
-
-### 0.1.7 (2026-06-09)
-
-- Converted runtime logs and ioBroker object labels to English for repository review compliance.
-- Added Node.js-safe upper bounds for configurable polling and RTC check intervals while keeping automatic RTC checks at a 24-hour minimum.
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
