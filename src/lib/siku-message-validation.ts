@@ -121,6 +121,14 @@ function getOptionalIPv4Field(payload: Record<string, unknown>, fieldName: strin
     return value;
 }
 
+function getRequiredIPv4Field(payload: Record<string, unknown>, fieldName: string): string {
+    const value = getRequiredStringField(payload, fieldName).trim();
+    if (!isIPv4(value)) {
+        throw new Error(`${fieldName} must be an IPv4 address`);
+    }
+    return value;
+}
+
 function getOptionalPasswordField(payload: Record<string, unknown>): string | undefined {
     const password = getOptionalStringField(payload, 'password', { maxLength: 8 });
     if (password !== undefined && !/^[0-9A-Za-z]+$/u.test(password)) {
@@ -194,7 +202,7 @@ export function normalizeReadDeviceMessagePayload(message: unknown): ReadDeviceM
     }
 
     return {
-        host: getOptionalIPv4Field(payload, 'host') ?? getRequiredStringField(payload, 'host'),
+        host: getRequiredIPv4Field(payload, 'host'),
         deviceId: getDeviceIdField(payload),
         password: getOptionalPasswordField(payload),
         port: getOptionalIntegerField(payload, 'port', 1, 65535),

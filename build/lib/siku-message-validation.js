@@ -70,6 +70,13 @@ function getOptionalIPv4Field(payload, fieldName) {
   }
   return value;
 }
+function getRequiredIPv4Field(payload, fieldName) {
+  const value = getRequiredStringField(payload, fieldName).trim();
+  if (!(0, import_node_net.isIPv4)(value)) {
+    throw new Error(`${fieldName} must be an IPv4 address`);
+  }
+  return value;
+}
 function getOptionalPasswordField(payload) {
   const password = getOptionalStringField(payload, "password", { maxLength: 8 });
   if (password !== void 0 && !/^[0-9A-Za-z]+$/u.test(password)) {
@@ -104,7 +111,6 @@ function normalizeDiscoverMessagePayload(message) {
   };
 }
 function normalizeReadDeviceMessagePayload(message) {
-  var _a;
   const payload = getObjectPayload(message, "readDevice");
   const parameters = payload.parameters;
   if (!Array.isArray(parameters)) {
@@ -114,7 +120,7 @@ function normalizeReadDeviceMessagePayload(message) {
     throw new Error("parameters must not be empty");
   }
   return {
-    host: (_a = getOptionalIPv4Field(payload, "host")) != null ? _a : getRequiredStringField(payload, "host"),
+    host: getRequiredIPv4Field(payload, "host"),
     deviceId: getDeviceIdField(payload),
     password: getOptionalPasswordField(payload),
     port: getOptionalIntegerField(payload, "port", 1, 65535),

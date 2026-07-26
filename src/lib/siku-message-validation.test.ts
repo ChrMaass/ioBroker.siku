@@ -84,6 +84,13 @@ describe('SIKU message payload validation', () => {
                 parameters: [1],
             }),
         ).to.throw('host must be an IPv4 address');
+        expect(() =>
+            normalizeReadDeviceMessagePayload({
+                host: '   ',
+                deviceId: '001800354353530B',
+                parameters: [1],
+            }),
+        ).to.throw('host must be an IPv4 address');
 
         expect(() =>
             normalizeReadDeviceMessagePayload({
