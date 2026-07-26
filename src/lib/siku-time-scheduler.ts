@@ -7,34 +7,36 @@
  * @param now - Current wall-clock time
  * @param lastCheckTimestamps - Persisted ISO timestamps of enabled devices
  * @param intervalMs - Normalized time-check interval
+ * @param minimumDelayMs - Optional lower bound used for busy/error backoff
  */
 export function getNextTimeCheckDelayMs(
     now: Date,
     lastCheckTimestamps: ReadonlyArray<string | null | undefined>,
     intervalMs: number,
+    minimumDelayMs = 0,
 ): number {
     if (lastCheckTimestamps.length === 0) {
-        return intervalMs;
+        return Math.max(intervalMs, minimumDelayMs);
     }
 
     let shortestDelay = intervalMs;
     for (const timestamp of lastCheckTimestamps) {
         if (!timestamp) {
-            return 0;
+            return minimumDelayMs;
         }
 
         const parsed = new Date(timestamp);
         if (Number.isNaN(parsed.getTime())) {
-            return 0;
+            return minimumDelayMs;
         }
 
         const elapsedMs = Math.max(now.getTime() - parsed.getTime(), 0);
         if (elapsedMs >= intervalMs) {
-            return 0;
+            return minimumDelayMs;
         }
 
         shortestDelay = Math.min(shortestDelay, intervalMs - elapsedMs);
     }
 
-    return shortestDelay;
+    return Math.max(shortestDelay, minimumDelayMs);
 }

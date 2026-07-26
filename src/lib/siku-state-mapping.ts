@@ -40,6 +40,17 @@ export interface SikuRelativeStateUpdate {
     value: ioBroker.StateValue;
 }
 
+export interface SikuStateDecodeError {
+    parameter: number;
+    relativeId: string;
+    message: string;
+}
+
+export interface SikuMappedStateResult {
+    updates: SikuRelativeStateUpdate[];
+    errors: SikuStateDecodeError[];
+}
+
 export interface SikuStateDefinition {
     relativeId: string;
     common: Partial<ioBroker.StateCommon>;
@@ -612,8 +623,9 @@ export function getStateDefinitionsByChannel(channelId: string): SikuStateDefini
     return SIKU_STATE_DEFINITIONS.filter(definition => definition.relativeId.startsWith(`${channelId}.`));
 }
 
-export function decodeMappedStateUpdates(packet: ParsedSikuPacket): SikuRelativeStateUpdate[] {
+export function decodeMappedStateResult(packet: ParsedSikuPacket): SikuMappedStateResult {
     const updates: SikuRelativeStateUpdate[] = [];
+    const errors: SikuStateDecodeError[] = [];
 
     for (const definition of SIKU_STATE_DEFINITIONS) {
         if (!definition.read) {
@@ -625,13 +637,31 @@ export function decodeMappedStateUpdates(packet: ParsedSikuPacket): SikuRelative
             continue;
         }
 
-        updates.push({
-            relativeId: definition.relativeId,
-            value: definition.read.decode(value),
-        });
+        try {
+            updates.push({
+                relativeId: definition.relativeId,
+                value: definition.read.decode(value),
+            });
+        } catch (error) {
+            errors.push({
+                parameter: definition.read.parameter,
+                relativeId: definition.relativeId,
+                message: (error as Error).message,
+            });
+        }
     }
 
-    return updates;
+    return { updates, errors };
+}
+
+/**
+ * Decodes all usable mapped states while intentionally isolating malformed optional
+ * parameters. Callers that also need diagnostics can use `decodeMappedStateResult`.
+ *
+ * @param packet - Parsed device response packet
+ */
+export function decodeMappedStateUpdates(packet: ParsedSikuPacket): SikuRelativeStateUpdate[] {
+    return decodeMappedStateResult(packet).updates;
 }
 
 export function buildWriteRequestForState(relativeId: string, value: ioBroker.StateValue): SikuWriteRequestEntry {

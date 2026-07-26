@@ -1,5 +1,5 @@
 import { isIPv4 } from 'node:net';
-import { SIKU_DEVICE_ID_LENGTH } from './siku-constants';
+import { SIKU_DEVICE_ID_LENGTH, SIKU_DISCOVERY_MAX_TIMEOUT_MS } from './siku-constants';
 import { SIKU_NODEJS_MAX_TIMER_MS } from './siku-timer';
 
 /**
@@ -109,7 +109,12 @@ function getRequiredStringField(
 }
 
 function getOptionalIPv4Field(payload: Record<string, unknown>, fieldName: string): string | undefined {
-    const value = getOptionalStringField(payload, fieldName);
+    const rawValue = payload[fieldName];
+    if (typeof rawValue === 'string' && rawValue.trim().length === 0) {
+        return undefined;
+    }
+
+    const value = getOptionalStringField(payload, fieldName)?.trim();
     if (value !== undefined && !isIPv4(value)) {
         throw new Error(`${fieldName} must be an IPv4 address`);
     }
@@ -168,7 +173,7 @@ export function normalizeDiscoverMessagePayload(message: unknown): DiscoverMessa
     return {
         broadcastAddress: getOptionalIPv4Field(payload, 'broadcastAddress'),
         password: getOptionalPasswordField(payload),
-        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, SIKU_NODEJS_MAX_TIMER_MS),
+        timeoutMs: getOptionalIntegerField(payload, 'timeoutMs', 1, SIKU_DISCOVERY_MAX_TIMEOUT_MS),
         preferredBindPort: getOptionalIntegerField(payload, 'preferredBindPort', 0, 65535),
     };
 }

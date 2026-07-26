@@ -15,6 +15,7 @@ export interface PreparedStoredDevicePasswords {
     runtimeRegistry: SikuDevicePasswordRegistry;
     storedRegistry: SikuDevicePasswordEntries;
     storageChanged: boolean;
+    invalidDeviceIds: string[];
 }
 
 const AES_PASSWORD_PREFIX = '$/aes-192-cbc:';
@@ -132,13 +133,18 @@ export function serializeDevicePasswordRegistry(registry: SikuDevicePasswordRegi
  * @param device - Raw configured device
  * @param index - Index inside `native.devices`
  * @param registry - Normalized dedicated password registry
+ * @param unavailableDeviceIds - Device ids whose stored credential could not be decrypted
  */
 export function resolveConfiguredDevicePassword(
     device: Partial<ioBroker.SikuDeviceConfig>,
     index: number,
     registry: SikuDevicePasswordRegistry,
+    unavailableDeviceIds: ReadonlySet<string> = new Set(),
 ): string {
     const normalizedId = normalizeDevicePasswordRegistryKey(device.id);
+    if (normalizedId && unavailableDeviceIds.has(normalizedId)) {
+        throw new Error(`devicePasswords.${normalizedId} could not be decrypted and must be configured again`);
+    }
     const registryPassword = normalizedId ? registry[normalizedId] : undefined;
     const legacyPassword = getTrimmedPasswordValue(device.password);
     const resolvedPassword = registryPassword ?? legacyPassword ?? SIKU_DEFAULT_PASSWORD;
@@ -190,12 +196,15 @@ export function prepareStoredDevicePasswords(
     const storedRows = getStoredPasswordRows(options.storedRegistry);
     const runtimeRegistry: SikuDevicePasswordRegistry = {};
     const storedRegistry: SikuDevicePasswordEntries = [];
+    const invalidDeviceIds: string[] = [];
+    const configuredIds = new Set<string>();
 
     for (const device of options.configuredDevices) {
         const id = normalizeDevicePasswordRegistryKey(device.id);
-        if (!id || runtimeRegistry[id] !== undefined) {
+        if (!id || configuredIds.has(id)) {
             continue;
         }
+        configuredIds.add(id);
 
         const storedValue = storedRows.get(id);
         let decryptedStoredValue: string | undefined;
@@ -222,7 +231,13 @@ export function prepareStoredDevicePasswords(
         }
 
         if (!password) {
-            throw new Error(`No usable password found for device ${id}`);
+            invalidDeviceIds.push(id);
+            if (storedValue) {
+                // Preserve unreadable ciphertext so a temporary controller-secret mismatch
+                // does not destroy credentials that may become readable again after restore.
+                storedRegistry.push({ id, password: storedValue });
+            }
+            continue;
         }
 
         runtimeRegistry[id] = password;
@@ -239,6 +254,16 @@ export function prepareStoredDevicePasswords(
     const normalizedStoredRows = Array.from(storedRows.entries())
         .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
         .map(([id, password]) => ({ id, password }));
+    if (configuredIds.size === 0) {
+        // An empty device list may be a transient/failed Admin save. Keep encrypted
+        // credentials recoverable instead of irreversibly purging every row at once.
+        return {
+            runtimeRegistry,
+            storedRegistry: normalizedStoredRows,
+            storageChanged: false,
+            invalidDeviceIds,
+        };
+    }
 
     return {
         runtimeRegistry,
@@ -246,6 +271,7 @@ export function prepareStoredDevicePasswords(
         storageChanged:
             !Array.isArray(options.storedRegistry) ||
             JSON.stringify(storedRegistry) !== JSON.stringify(normalizedStoredRows),
+        invalidDeviceIds,
     };
 }
 

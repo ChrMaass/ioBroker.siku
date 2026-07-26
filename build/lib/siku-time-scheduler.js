@@ -21,26 +21,26 @@ __export(siku_time_scheduler_exports, {
   getNextTimeCheckDelayMs: () => getNextTimeCheckDelayMs
 });
 module.exports = __toCommonJS(siku_time_scheduler_exports);
-function getNextTimeCheckDelayMs(now, lastCheckTimestamps, intervalMs) {
+function getNextTimeCheckDelayMs(now, lastCheckTimestamps, intervalMs, minimumDelayMs = 0) {
   if (lastCheckTimestamps.length === 0) {
-    return intervalMs;
+    return Math.max(intervalMs, minimumDelayMs);
   }
   let shortestDelay = intervalMs;
   for (const timestamp of lastCheckTimestamps) {
     if (!timestamp) {
-      return 0;
+      return minimumDelayMs;
     }
     const parsed = new Date(timestamp);
     if (Number.isNaN(parsed.getTime())) {
-      return 0;
+      return minimumDelayMs;
     }
     const elapsedMs = Math.max(now.getTime() - parsed.getTime(), 0);
     if (elapsedMs >= intervalMs) {
-      return 0;
+      return minimumDelayMs;
     }
     shortestDelay = Math.min(shortestDelay, intervalMs - elapsedMs);
   }
-  return shortestDelay;
+  return Math.max(shortestDelay, minimumDelayMs);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

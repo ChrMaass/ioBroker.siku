@@ -4,6 +4,7 @@ import { SikuFunction } from './siku-constants';
 import {
     SIKU_STATE_DEFINITIONS,
     buildWriteRequestForState,
+    decodeMappedStateResult,
     decodeMappedStateUpdates,
     getWritableStateDefinition,
     isButtonState,
@@ -129,5 +130,37 @@ describe('SIKU state mappings', () => {
 
         expect(asMap.get('timers.filterCountdownMinutes')).to.equal(264432);
         expect(asMap.get('timers.filterCountdownText')).to.equal('183d 15h 12m');
+    });
+
+    it('isolates malformed optional parameters without discarding valid poll values', () => {
+        const packet = buildPacket(
+            Buffer.from('001800354353530B', 'ascii'),
+            '1111',
+            SikuFunction.Response,
+            Buffer.from([
+                0x01,
+                0x01,
+                0x25,
+                0x42,
+                0xfe,
+                0x01,
+                0x86,
+                0x01, // Firmware requires six bytes and must be isolated.
+            ]),
+        );
+
+        const result = decodeMappedStateResult(parsePacket(packet));
+        const asMap = new Map(result.updates.map(update => [update.relativeId, update.value]));
+
+        expect(asMap.get('control.power')).to.equal(true);
+        expect(asMap.get('sensors.humidity')).to.equal(66);
+        expect(asMap.has('info.firmwareVersion')).to.equal(false);
+        expect(result.errors).to.deep.equal([
+            {
+                parameter: 0x0086,
+                relativeId: 'info.firmwareVersion',
+                message: 'Firmware version must be 6 bytes long, received 1',
+            },
+        ]);
     });
 });

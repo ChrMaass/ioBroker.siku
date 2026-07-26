@@ -5,6 +5,7 @@ import {
     buildScheduleReadRequests,
     buildScheduleReadRequestChunks,
     buildScheduleWriteRequest,
+    buildScheduleWriteRequestFromSnapshot,
     decodeScheduleUpdates,
     getScheduleSnapshotStateIds,
     getScheduleStateDefinition,
@@ -158,5 +159,42 @@ describe('SIKU schedule helpers', () => {
                 'schedule.tuesday.p1.endMinute': 0,
             }),
         ).to.throw('Schedule end hour must be an integer between 0 and 23');
+    });
+
+    it('rejects schedule writes that would reuse an unconfirmed sibling value', () => {
+        expect(() =>
+            buildScheduleWriteRequestFromSnapshot('schedule.monday.p1.endMinute', 30, [
+                { relativeId: 'schedule.monday.p1.speed', value: 3, acknowledged: false },
+                { relativeId: 'schedule.monday.p1.endHour', value: 8, acknowledged: true },
+                { relativeId: 'schedule.monday.p1.endMinute', value: 15, acknowledged: false },
+            ]),
+        ).to.throw('Schedule snapshot state schedule.monday.p1.speed is not acknowledged');
+
+        expect(
+            buildScheduleWriteRequestFromSnapshot('schedule.monday.p1.endMinute', 30, [
+                { relativeId: 'schedule.monday.p1.speed', value: 3, acknowledged: true },
+                { relativeId: 'schedule.monday.p1.endHour', value: 8, acknowledged: true },
+                { relativeId: 'schedule.monday.p1.endMinute', value: 15, acknowledged: false },
+            ]),
+        ).to.deep.equal({
+            parameter: 0x0077,
+            value: Buffer.from([0x01, 0x01, 0x03, 0x00, 0x1e, 0x08]),
+        });
+
+        expect(
+            buildScheduleWriteRequestFromSnapshot('schedule.monday.p1.endMinute', 30, [
+                {
+                    relativeId: 'schedule.monday.p1.speed',
+                    value: 2,
+                    acknowledged: false,
+                    pending: true,
+                },
+                { relativeId: 'schedule.monday.p1.endHour', value: 9, acknowledged: true },
+                { relativeId: 'schedule.monday.p1.endMinute', value: 15, acknowledged: false },
+            ]),
+        ).to.deep.equal({
+            parameter: 0x0077,
+            value: Buffer.from([0x01, 0x01, 0x02, 0x00, 0x1e, 0x09]),
+        });
     });
 });
