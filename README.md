@@ -128,6 +128,8 @@ guard for configuration handling, not a security boundary against malicious code
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+### **WORK IN PROGRESS**
+
 ### 0.2.3 (2026-07-26)
 
 - Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and
