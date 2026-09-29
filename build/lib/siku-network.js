@@ -41,6 +41,65 @@ var import_node_os = require("node:os");
 var import_promises = require("node:timers/promises");
 var import_siku_constants = require("./siku-constants");
 var import_siku_protocol = require("./siku-protocol");
+function closeSocketSafely(socket) {
+  socket.removeAllListeners();
+  socket.on("error", () => void 0);
+  socket.close();
+}
+function createAbortError() {
+  const error = new Error("SIKU network operation aborted");
+  error.name = "AbortError";
+  return error;
+}
+function throwIfAborted(signal) {
+  if (signal == null ? void 0 : signal.aborted) {
+    throw createAbortError();
+  }
+}
+function isAbortError(error) {
+  return error instanceof Error && error.name === "AbortError";
+}
+async function waitWithSignal(promise, signal) {
+  if (!signal) {
+    return promise;
+  }
+  const abortSignal = signal;
+  throwIfAborted(abortSignal);
+  return new Promise((resolve, reject) => {
+    function cleanup() {
+      abortSignal.removeEventListener("abort", onAbort);
+    }
+    function onAbort() {
+      cleanup();
+      reject(createAbortError());
+    }
+    abortSignal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    );
+  });
+}
+async function waitForDelay(timeoutMs, injectedTimer, signal) {
+  if (injectedTimer) {
+    await waitWithSignal(Promise.resolve(injectedTimer(timeoutMs)), signal);
+    return;
+  }
+  try {
+    await (0, import_promises.setTimeout)(timeoutMs, void 0, signal ? { signal } : void 0);
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw createAbortError();
+    }
+    throw error;
+  }
+}
 function getLocalIPv4Addresses() {
   const interfaces = (0, import_node_os.networkInterfaces)();
   const localAddresses = /* @__PURE__ */ new Set();
@@ -101,15 +160,18 @@ async function bindRequestSocket(localPort) {
   });
   return socket;
 }
-async function requestOnce(host, port, payload, timeoutMs, localPort = port, bindRequest = bindRequestSocket) {
+async function requestOnce(host, port, payload, timeoutMs, localPort = port, bindRequest = bindRequestSocket, signal) {
+  throwIfAborted(signal);
   const socket = await bindRequest(localPort);
   return new Promise((resolve, reject) => {
+    var _a;
     let finished = false;
-    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const timeoutHandle = setTimeout(onTimeout, timeoutMs);
+    (_a = timeoutHandle.unref) == null ? void 0 : _a.call(timeoutHandle);
     const cleanup = () => {
-      timeoutSignal.removeEventListener("abort", onTimeout);
-      socket.removeAllListeners();
-      socket.close();
+      clearTimeout(timeoutHandle);
+      signal == null ? void 0 : signal.removeEventListener("abort", onAbort);
+      closeSocketSafely(socket);
     };
     const finish = (error, response) => {
       if (finished) {
@@ -128,7 +190,14 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port, bin
     function onTimeout() {
       finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
     }
-    timeoutSignal.addEventListener("abort", onTimeout, { once: true });
+    function onAbort() {
+      finish(createAbortError());
+    }
+    if (signal == null ? void 0 : signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal == null ? void 0 : signal.addEventListener("abort", onAbort, { once: true });
     socket.on("error", finish);
     socket.on("message", (message, remoteInfo) => {
       if (remoteInfo.address === host && remoteInfo.port === port) {
@@ -142,7 +211,8 @@ async function requestOnce(host, port, payload, timeoutMs, localPort = port, bin
     });
   });
 }
-async function sendOnce(host, port, payload, localPort = port, bindRequest = bindRequestSocket) {
+async function sendOnce(host, port, payload, localPort = port, bindRequest = bindRequestSocket, signal) {
+  throwIfAborted(signal);
   const socket = await bindRequest(localPort);
   return new Promise((resolve, reject) => {
     let finished = false;
@@ -151,10 +221,18 @@ async function sendOnce(host, port, payload, localPort = port, bindRequest = bin
         return;
       }
       finished = true;
-      socket.removeAllListeners();
-      socket.close();
+      signal == null ? void 0 : signal.removeEventListener("abort", onAbort);
+      closeSocketSafely(socket);
       error ? reject(error) : resolve();
     };
+    function onAbort() {
+      finish(createAbortError());
+    }
+    if (signal == null ? void 0 : signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal == null ? void 0 : signal.addEventListener("abort", onAbort, { once: true });
     socket.on("error", finish);
     socket.send(payload, port, host, (error) => finish(error != null ? error : void 0));
   });
@@ -180,24 +258,25 @@ function validateResponseCorrelation(packet, host, expectedDeviceId, expectedPar
     }
   }
 }
-async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, expectedDeviceId, expectedParameters, dependencies) {
-  var _a, _b;
-  const request = (_a = dependencies.requestOnce) != null ? _a : ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort) => requestOnce(
+async function executeRequestWithRetries(host, port, payload, timeoutMs, localPort, retryDelaysMs, expectedDeviceId, expectedParameters, signal, dependencies) {
+  var _a;
+  const request = (_a = dependencies.requestOnce) != null ? _a : ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort, requestSignal) => requestOnce(
     targetHost,
     targetPort,
     requestPayload,
     requestTimeoutMs,
     requestLocalPort,
-    dependencies.bindRequestSocket
+    dependencies.bindRequestSocket,
+    requestSignal
   ));
-  const timer = (_b = dependencies.timer) != null ? _b : import_promises.setTimeout;
   let lastError;
   for (const retryDelay of retryDelaysMs) {
     try {
+      throwIfAborted(signal);
       if (retryDelay > 0) {
-        await timer(retryDelay);
+        await waitForDelay(retryDelay, dependencies.timer, signal);
       }
-      const response = await request(host, port, payload, timeoutMs, localPort);
+      const response = await request(host, port, payload, timeoutMs, localPort, signal);
       const parsed = (0, import_siku_protocol.parsePacket)(response);
       if (!parsed.checksumValid) {
         throw new Error(`Invalid checksum in response from ${host}`);
@@ -210,6 +289,9 @@ async function executeRequestWithRetries(host, port, payload, timeoutMs, localPo
       validateResponseCorrelation(parsed, host, expectedDeviceId, expectedParameters);
       return parsed;
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
       lastError = error;
     }
   }
@@ -291,6 +373,7 @@ async function readDevicePacket(options, dependencies = {}) {
     (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
     options.deviceId,
     options.parameters.map((parameter) => parameter.parameter),
+    options.signal,
     dependencies
   );
 }
@@ -306,6 +389,7 @@ async function writeDevicePacket(options, dependencies = {}) {
     (_e = options.retryDelaysMs) != null ? _e : import_siku_constants.SIKU_REQUEST_RETRY_DELAYS_MS,
     options.deviceId,
     options.parameters.map((parameter) => parameter.parameter),
+    options.signal,
     dependencies
   );
   validateWriteEcho(packet, options.parameters, options.host);
@@ -316,22 +400,35 @@ async function sendWriteOnlyDevicePacket(options, dependencies = {}) {
   const port = (_a = options.port) != null ? _a : import_siku_constants.SIKU_DEFAULT_PORT;
   const localPort = (_b = options.localPort) != null ? _b : port;
   const payload = (0, import_siku_protocol.buildWritePacket)(options.deviceId, options.password, import_siku_constants.SikuFunction.Write, options.parameters);
-  const send = (_c = dependencies.sendOnce) != null ? _c : ((targetHost, targetPort, requestPayload, requestLocalPort) => sendOnce(targetHost, targetPort, requestPayload, requestLocalPort, dependencies.bindRequestSocket));
-  await send(options.host, port, payload, localPort);
+  const send = (_c = dependencies.sendOnce) != null ? _c : ((targetHost, targetPort, requestPayload, requestLocalPort, requestSignal) => sendOnce(
+    targetHost,
+    targetPort,
+    requestPayload,
+    requestLocalPort,
+    dependencies.bindRequestSocket,
+    requestSignal
+  ));
+  await send(options.host, port, payload, localPort, options.signal);
 }
 async function discoverDevices(options, dependencies = {}) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f;
   const bind = (_a = dependencies.bindSocketWithFallback) != null ? _a : bindSocketWithFallback;
-  const timer = (_b = dependencies.timer) != null ? _b : import_promises.setTimeout;
-  const now = (_c = dependencies.now) != null ? _c : (() => /* @__PURE__ */ new Date());
-  const localAddresses = ((_d = dependencies.getLocalIPv4Addresses) != null ? _d : getLocalIPv4Addresses)();
-  const socket = await bind((_e = options.preferredBindPort) != null ? _e : import_siku_constants.SIKU_DEFAULT_PORT);
-  const discoveryPacket = (0, import_siku_protocol.buildDiscoveryPacket)((_f = options.password) != null ? _f : import_siku_constants.SIKU_DEFAULT_PASSWORD);
+  const now = (_b = dependencies.now) != null ? _b : (() => /* @__PURE__ */ new Date());
+  const localAddresses = ((_c = dependencies.getLocalIPv4Addresses) != null ? _c : getLocalIPv4Addresses)();
+  throwIfAborted(options.signal);
+  const socket = await bind((_d = options.preferredBindPort) != null ? _d : import_siku_constants.SIKU_DEFAULT_PORT);
+  const discoveryPasswords = Array.from(
+    new Set(((_e = options.passwords) == null ? void 0 : _e.length) ? options.passwords : [(_f = options.password) != null ? _f : import_siku_constants.SIKU_DEFAULT_PASSWORD])
+  ).slice(0, import_siku_constants.SIKU_DISCOVERY_MAX_PASSWORDS);
+  const discoveryPackets = discoveryPasswords.map((password) => (0, import_siku_protocol.buildDiscoveryPacket)(password));
   try {
+    throwIfAborted(options.signal);
     socket.setBroadcast(true);
     const devices = /* @__PURE__ */ new Map();
     socket.on("message", (message, remoteInfo) => {
-      if (isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)) {
+      if (discoveryPackets.some(
+        (discoveryPacket) => isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)
+      )) {
         return;
       }
       try {
@@ -343,19 +440,30 @@ async function discoverDevices(options, dependencies = {}) {
       } catch {
       }
     });
-    await new Promise((resolve, reject) => {
-      var _a2;
-      socket.send(
-        discoveryPacket,
-        (_a2 = options.port) != null ? _a2 : import_siku_constants.SIKU_DEFAULT_PORT,
-        options.broadcastAddress,
-        (error) => error ? reject(error) : resolve()
-      );
+    const socketError = new Promise((_resolve, reject) => {
+      socket.on("error", reject);
     });
-    await timer((_g = options.timeoutMs) != null ? _g : import_siku_constants.SIKU_DISCOVERY_TIMEOUT_MS);
+    const discoveryWindow = (async () => {
+      var _a2;
+      await Promise.all(
+        discoveryPackets.map(
+          (discoveryPacket) => new Promise((resolve, reject) => {
+            var _a3;
+            socket.send(
+              discoveryPacket,
+              (_a3 = options.port) != null ? _a3 : import_siku_constants.SIKU_DEFAULT_PORT,
+              options.broadcastAddress,
+              (error) => error ? reject(error) : resolve()
+            );
+          })
+        )
+      );
+      await waitForDelay((_a2 = options.timeoutMs) != null ? _a2 : import_siku_constants.SIKU_DISCOVERY_TIMEOUT_MS, dependencies.timer, options.signal);
+    })();
+    await waitWithSignal(Promise.race([discoveryWindow, socketError]), options.signal);
     return Array.from(devices.values()).sort((left, right) => left.deviceId.localeCompare(right.deviceId));
   } finally {
-    socket.close();
+    closeSocketSafely(socket);
   }
 }
 // Annotate the CommonJS export names for ESM import in node:

@@ -85,6 +85,17 @@ describe('SIKU runtime helpers', () => {
                 },
             ),
         ).to.throw('devicePasswords.001800354353530B must contain 1 to 8 letters or digits');
+        expect(() =>
+            normalizeConfiguredDevice(
+                {
+                    id: '001800354353530B',
+                    host: '192.168.55.46',
+                },
+                0,
+                {},
+                new Set(['001800354353530B']),
+            ),
+        ).to.throw('devicePasswords.001800354353530B could not be decrypted and must be configured again');
     });
 
     it('decodes IPv4 values when the payload length is correct', () => {
@@ -144,6 +155,19 @@ describe('SIKU runtime helpers', () => {
 
         expect(() => decodePollSnapshot('004500324353530B', parsePacket(packet))).to.throw(
             'Configured device ID 004500324353530B does not match response device ID 001800354353530B',
+        );
+    });
+
+    it('normalizes lowercase device ids reported by compatible firmware', () => {
+        const packet = buildPacket(
+            Buffer.from('001800354353530b', 'ascii'),
+            '1111',
+            SikuFunction.Response,
+            Buffer.from([0xfe, 0x10, 0x7c, ...Buffer.from('001800354353530b', 'ascii')]),
+        );
+
+        expect(decodePollSnapshot('001800354353530B', parsePacket(packet)).reportedDeviceId).to.equal(
+            '001800354353530B',
         );
     });
 });

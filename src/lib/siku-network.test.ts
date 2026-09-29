@@ -206,6 +206,91 @@ describe('SIKU network helpers', () => {
         ]);
     });
 
+    it('sends multiple password candidates within one shared discovery window', async () => {
+        const fakeSocket = new FakeDiscoverySocket(4000, socket => {
+            socket.emit('message', Buffer.from(discoveryResponseHex, 'hex'), {
+                address: '192.168.55.46',
+                family: 'IPv4',
+                port: 4000,
+                size: discoveryResponseHex.length / 2,
+            });
+        });
+        let timerCalls = 0;
+
+        const devices = await discoverDevices(
+            {
+                broadcastAddress: '255.255.255.255',
+                passwords: ['1111', '2222', '1111'],
+                timeoutMs: 1,
+            },
+            {
+                bindSocketWithFallback: () => Promise.resolve(fakeSocket),
+                timer: () => {
+                    timerCalls++;
+                    return Promise.resolve();
+                },
+            },
+        );
+
+        expect(fakeSocket.sentPackets).to.have.length(2);
+        expect(timerCalls).to.equal(1);
+        expect(devices.map(device => device.deviceId)).to.deep.equal(['001800354353530B']);
+    });
+
+    it('rejects a discovery socket error after binding and always closes the socket', async () => {
+        const fakeSocket = new FakeDiscoverySocket(4000, socket => {
+            queueMicrotask(() => socket.emit('error', new Error('discovery interface failed')));
+        });
+        let thrownError: Error | undefined;
+
+        try {
+            await discoverDevices(
+                {
+                    broadcastAddress: '255.255.255.255',
+                    timeoutMs: 10_000,
+                },
+                {
+                    bindSocketWithFallback: () => Promise.resolve(fakeSocket),
+                    timer: () => new Promise(() => undefined),
+                },
+            );
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(thrownError?.message).to.equal('discovery interface failed');
+        expect(fakeSocket.closed).to.equal(true);
+    });
+
+    it('aborts an active discovery immediately and closes its socket', async () => {
+        const fakeSocket = new FakeDiscoverySocket(4000);
+        const controller = new AbortController();
+        const discoveryPromise = discoverDevices(
+            {
+                broadcastAddress: '255.255.255.255',
+                timeoutMs: 10_000,
+                signal: controller.signal,
+            },
+            {
+                bindSocketWithFallback: () => Promise.resolve(fakeSocket),
+                timer: () => new Promise(() => undefined),
+            },
+        );
+
+        await Promise.resolve();
+        controller.abort();
+
+        let thrownError: Error | undefined;
+        try {
+            await discoveryPromise;
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(thrownError?.name).to.equal('AbortError');
+        expect(fakeSocket.closed).to.equal(true);
+    });
+
     it('retries read requests after parse errors and returns the first valid response', async () => {
         const attemptResponses = [
             Buffer.from('FDFD02', 'hex'),
@@ -407,6 +492,40 @@ describe('SIKU network helpers', () => {
         expect(fakeSocket.sentPackets).to.have.length(1);
         expect(fakeSocket.closed).to.equal(true);
         expect(thrownError?.message).to.equal('UDP request to 127.0.0.1:4000 timed out after 20 ms');
+        expect(() => fakeSocket.emit('error', new Error('late socket error'))).not.to.throw();
+    });
+
+    it('aborts an active UDP request immediately during adapter shutdown', async () => {
+        const fakeSocket = new FakeUnresponsiveRequestSocket();
+        const controller = new AbortController();
+        let thrownError: Error | undefined;
+
+        const request = readDevicePacket(
+            {
+                host: '127.0.0.1',
+                deviceId: '001800354353530B',
+                password: '1111',
+                port: 4000,
+                localPort: 0,
+                timeoutMs: 10_000,
+                retryDelaysMs: [0],
+                parameters: [{ parameter: 0x0001 }],
+                signal: controller.signal,
+            },
+            {
+                bindRequestSocket: () => Promise.resolve(fakeSocket),
+            },
+        );
+        controller.abort();
+
+        try {
+            await request;
+        } catch (error) {
+            thrownError = error as Error;
+        }
+
+        expect(fakeSocket.closed).to.equal(true);
+        expect(thrownError?.name).to.equal('AbortError');
     });
 
     it('uses the target port as local request port by default for read and write traffic', async () => {

@@ -160,15 +160,72 @@ describe('SIKU password config helpers', () => {
         expect(result.storageChanged).to.equal(true);
     });
 
-    it('rejects passwords outside the protocol character set', () => {
-        expect(() =>
-            prepareStoredDevicePasswords({
-                configuredDevices: [{ id: '001800354353530B', host: '192.168.55.46' }],
-                decryptedRegistry: [{ id: '001800354353530B', password: 'bad-value!' }],
-                storedRegistry: [{ id: '001800354353530B', password: 'bad-value!' }],
-                decrypt: () => 'still-bad!',
-                encrypt: value => value,
-            }),
-        ).to.throw('No usable password found for device 001800354353530B');
+    it('removes encrypted password rows for devices no longer configured', () => {
+        const result = prepareStoredDevicePasswords({
+            configuredDevices: [{ id: '001800354353530B', host: '192.168.55.46' }],
+            decryptedRegistry: [{ id: '001800354353530B', password: '1111' }],
+            storedRegistry: [
+                { id: '001800354353530B', password: '$/aes-192-cbc:configured' },
+                { id: '004500324353530B', password: '$/aes-192-cbc:orphaned-device-password' },
+            ],
+            decrypt: value => (value.endsWith('configured') ? '1111' : '2222'),
+            encrypt: value => `$/aes-192-cbc:${value}`,
+        });
+
+        expect(result.storedRegistry).to.deep.equal([{ id: '001800354353530B', password: '$/aes-192-cbc:configured' }]);
+        expect(result.storageChanged).to.equal(true);
+    });
+
+    it('preserves every encrypted password when an empty device list may be transient', () => {
+        const storedRegistry = [
+            { id: '001800354353530B', password: '$/aes-192-cbc:first' },
+            { id: '004500324353530B', password: '$/aes-192-cbc:second' },
+        ];
+        const result = prepareStoredDevicePasswords({
+            configuredDevices: [],
+            decryptedRegistry: [],
+            storedRegistry,
+            decrypt: () => {
+                throw new Error('must not decrypt orphaned rows');
+            },
+            encrypt: value => `$/aes-192-cbc:${value}`,
+        });
+
+        expect(result.runtimeRegistry).to.deep.equal({});
+        expect(result.storedRegistry).to.deep.equal(storedRegistry);
+        expect(result.storageChanged).to.equal(false);
+    });
+
+    it('isolates an unreadable password row instead of aborting every configured device', () => {
+        const result = prepareStoredDevicePasswords({
+            configuredDevices: [
+                { id: '001800354353530B', host: '192.168.55.46' },
+                { id: '004500324353530B', host: '192.168.55.116' },
+            ],
+            decryptedRegistry: [
+                { id: '001800354353530B', password: 'bad-value!' },
+                { id: '004500324353530B', password: '4321' },
+            ],
+            storedRegistry: [
+                { id: '001800354353530B', password: '$/aes-192-cbc:unreadable' },
+                { id: '004500324353530B', password: '$/aes-192-cbc:valid' },
+            ],
+            decrypt: value => {
+                if (value.endsWith('unreadable')) {
+                    throw new Error('different controller secret');
+                }
+                return '4321';
+            },
+            encrypt: value => `$/aes-192-cbc:${value}`,
+        });
+
+        expect(result.runtimeRegistry).to.deep.equal({
+            '004500324353530B': '4321',
+        });
+        expect(result.invalidDeviceIds).to.deep.equal(['001800354353530B']);
+        expect(result.storedRegistry).to.deep.equal([
+            { id: '001800354353530B', password: '$/aes-192-cbc:unreadable' },
+            { id: '004500324353530B', password: '$/aes-192-cbc:valid' },
+        ]);
     });
 });

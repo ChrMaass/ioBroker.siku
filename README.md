@@ -111,17 +111,29 @@ A short release and repository checklist is available in [RELEASING.md](RELEASIN
 
 The adapter exposes these `sendTo` commands for scripts and integrations:
 
-- `discover`: run UDP broadcast discovery and merge discovered devices into the adapter config.
+- `discover`: run UDP broadcast discovery. Without an explicit password, the adapter tries the default and all
+  configured device passwords (at most 16) within one receive window of at most 10 seconds. Configuration updates
+  are returned and applied only for calls routed from an ioBroker Admin instance; other callers receive
+  `discoveryFoundNotSaved`.
 - `syncTimeAll`: run a manual RTC check/sync for all configured devices.
 - `syncTimeDevice`: run a manual RTC check/sync for one configured device by `deviceId`.
 - `readDevice`: read selected raw protocol parameters from one explicitly supplied IPv4/device-ID target for diagnostics.
 
 The diagnostic `readDevice` response serializes packet metadata and returned parameter values as hex strings. Device passwords are never returned; the response only includes `passwordLength`.
 
+The vendor UDP protocol transmits its short device password without transport encryption, including during
+discovery. Run the adapter only in a trusted, isolated local network. The Admin-origin check above is a message-routing
+guard for configuration handling, not a security boundary against malicious code already running inside ioBroker.
+
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 ### **WORK IN PROGRESS**
+
+### 0.2.3 (2026-07-26)
+
+- Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and
+  password/object lifecycle behavior.
 
 ### 0.2.2 (2026-07-11)
 
@@ -146,11 +158,6 @@ The diagnostic `readDevice` response serializes packet metadata and returned par
 - Cleaned up unused Admin translations found during the adapter checklist review.
 - Documented the advanced messagebox commands for script/integration use.
 - Added a code-side upper bound for the RTC time sync drift threshold.
-
-### 0.1.7 (2026-06-09)
-
-- Converted runtime logs and ioBroker object labels to English for repository review compliance.
-- Added Node.js-safe upper bounds for configurable polling and RTC check intervals while keeping automatic RTC checks at a 24-hour minimum.
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 

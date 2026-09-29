@@ -36,7 +36,7 @@ function getTrimmedString(value, fieldName) {
   }
   return value.trim();
 }
-function normalizeConfiguredDevice(device, index, passwordRegistry = void 0) {
+function normalizeConfiguredDevice(device, index, passwordRegistry = void 0, unavailablePasswordDeviceIds = /* @__PURE__ */ new Set()) {
   if (typeof device !== "object" || device === null) {
     throw new Error(`devices[${index}] must be an object`);
   }
@@ -53,7 +53,12 @@ function normalizeConfiguredDevice(device, index, passwordRegistry = void 0) {
   }
   const discoveredType = typeof device.discoveredType === "string" ? device.discoveredType.trim() : "";
   const lastSeen = typeof device.lastSeen === "string" ? device.lastSeen : "";
-  const password = (0, import_siku_password_config.resolveConfiguredDevicePassword)(device, index, (0, import_siku_password_config.normalizeDevicePasswordRegistry)(passwordRegistry));
+  const password = (0, import_siku_password_config.resolveConfiguredDevicePassword)(
+    device,
+    index,
+    (0, import_siku_password_config.normalizeDevicePasswordRegistry)(passwordRegistry),
+    unavailablePasswordDeviceIds
+  );
   const enabled = device.enabled === void 0 ? true : device.enabled;
   if (typeof enabled !== "boolean") {
     throw new Error(`devices[${index}].enabled must be a boolean`);
@@ -82,7 +87,7 @@ function decodePollSnapshot(configuredDeviceId, packet, receivedAt = /* @__PURE_
   const fanSpeedEntry = getPacketEntry(packet, import_siku_constants.SIKU_PARAMETER_FAN_SPEED);
   const deviceTypeEntry = getPacketEntry(packet, import_siku_constants.SIKU_PARAMETER_DEVICE_TYPE);
   const ipAddressEntry = getPacketEntry(packet, import_siku_constants.SIKU_PARAMETER_IP_ADDRESS);
-  const reportedDeviceId = (0, import_siku_protocol.decodeAscii)((_a = idEntry == null ? void 0 : idEntry.value) != null ? _a : packet.deviceIdBytes);
+  const reportedDeviceId = (0, import_siku_protocol.decodeAscii)((_a = idEntry == null ? void 0 : idEntry.value) != null ? _a : packet.deviceIdBytes).toUpperCase();
   if (!reportedDeviceId) {
     throw new Error("Device response did not contain a usable device ID");
   }

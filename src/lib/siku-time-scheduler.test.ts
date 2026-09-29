@@ -25,4 +25,12 @@ describe('SIKU persistent time-check scheduler', () => {
         expect(getNextTimeCheckDelayMs(now, ['invalid'], intervalMs)).to.equal(0);
         expect(getNextTimeCheckDelayMs(now, [], intervalMs)).to.equal(intervalMs);
     });
+
+    it('applies a minimum retry delay when an overdue check cannot run yet', () => {
+        expect(getNextTimeCheckDelayMs(now, [null], intervalMs, 60_000)).to.equal(60_000);
+        expect(getNextTimeCheckDelayMs(now, ['invalid'], intervalMs, 60_000)).to.equal(60_000);
+        expect(getNextTimeCheckDelayMs(now, ['2026-07-10T06:00:00.000Z'], intervalMs, 60_000)).to.equal(
+            18 * 60 * 60 * 1000,
+        );
+    });
 });

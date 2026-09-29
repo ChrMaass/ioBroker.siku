@@ -5,6 +5,7 @@ import { setTimeout as nodeTimer } from 'node:timers/promises';
 import {
     SIKU_DEFAULT_PASSWORD,
     SIKU_DEFAULT_PORT,
+    SIKU_DISCOVERY_MAX_PASSWORDS,
     SIKU_DISCOVERY_TIMEOUT_MS,
     SIKU_PARAMETER_DEVICE_ID,
     SIKU_PARAMETER_DEVICE_TYPE,
@@ -35,9 +36,12 @@ export interface SikuDiscoveredDevice {
 export interface SikuDiscoveryOptions {
     broadcastAddress: string;
     password?: string;
+    /** Optional credential candidates sent within the same bounded discovery window. */
+    passwords?: readonly string[];
     port?: number;
     timeoutMs?: number;
     preferredBindPort?: number;
+    signal?: AbortSignal;
 }
 
 export interface SikuReadDeviceOptions {
@@ -49,6 +53,7 @@ export interface SikuReadDeviceOptions {
     localPort?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
+    signal?: AbortSignal;
 }
 
 export interface SikuWriteDeviceOptions {
@@ -60,12 +65,15 @@ export interface SikuWriteDeviceOptions {
     localPort?: number;
     timeoutMs?: number;
     retryDelaysMs?: readonly number[];
+    signal?: AbortSignal;
 }
 
 interface SikuDiscoverySocket {
+    on(event: 'error', listener: (error: Error) => void): this;
     on(event: 'message', listener: (message: Buffer, remoteInfo: dgram.RemoteInfo) => void): this;
     send(buffer: Buffer, port: number, address: string, callback: (error: Error | null) => void): void;
     setBroadcast(flag: boolean): void;
+    removeAllListeners(): this;
     close(): void;
     address(): AddressInfo;
 }
@@ -78,6 +86,14 @@ interface SikuRequestSocket {
     close(): void;
 }
 
+function closeSocketSafely(socket: SikuDiscoverySocket | SikuRequestSocket): void {
+    socket.removeAllListeners();
+    // A datagram send can report a late error while close is already in progress.
+    // Keep a final guard so a handled timeout or abort cannot crash the process.
+    socket.on('error', () => undefined);
+    socket.close();
+}
+
 export interface SikuNetworkDependencies {
     bindSocketWithFallback?: (preferredPort: number) => Promise<SikuDiscoverySocket>;
     bindRequestSocket?: (localPort: number) => Promise<SikuRequestSocket>;
@@ -87,11 +103,78 @@ export interface SikuNetworkDependencies {
         payload: Buffer,
         timeoutMs: number,
         localPort: number,
+        signal?: AbortSignal,
     ) => Promise<Buffer>;
-    sendOnce?: (host: string, port: number, payload: Buffer, localPort: number) => Promise<void>;
+    sendOnce?: (host: string, port: number, payload: Buffer, localPort: number, signal?: AbortSignal) => Promise<void>;
     timer?: (timeoutMs: number) => Promise<unknown>;
     getLocalIPv4Addresses?: () => Set<string>;
     now?: () => Date;
+}
+
+function createAbortError(): Error {
+    const error = new Error('SIKU network operation aborted');
+    error.name = 'AbortError';
+    return error;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+    if (signal?.aborted) {
+        throw createAbortError();
+    }
+}
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
+}
+
+async function waitWithSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+    if (!signal) {
+        return promise;
+    }
+    const abortSignal = signal;
+    throwIfAborted(abortSignal);
+
+    return new Promise<T>((resolve, reject) => {
+        function cleanup(): void {
+            abortSignal.removeEventListener('abort', onAbort);
+        }
+        function onAbort(): void {
+            cleanup();
+            reject(createAbortError());
+        }
+
+        abortSignal.addEventListener('abort', onAbort, { once: true });
+        promise.then(
+            value => {
+                cleanup();
+                resolve(value);
+            },
+            error => {
+                cleanup();
+                reject(error instanceof Error ? error : new Error(String(error)));
+            },
+        );
+    });
+}
+
+async function waitForDelay(
+    timeoutMs: number,
+    injectedTimer: SikuNetworkDependencies['timer'],
+    signal?: AbortSignal,
+): Promise<void> {
+    if (injectedTimer) {
+        await waitWithSignal(Promise.resolve(injectedTimer(timeoutMs)), signal);
+        return;
+    }
+
+    try {
+        await nodeTimer(timeoutMs, undefined, signal ? { signal } : undefined);
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw createAbortError();
+        }
+        throw error;
+    }
 }
 
 function getLocalIPv4Addresses(): Set<string> {
@@ -173,17 +256,20 @@ async function requestOnce(
     timeoutMs: number,
     localPort: number = port,
     bindRequest: (localPort: number) => Promise<SikuRequestSocket> = bindRequestSocket,
+    signal?: AbortSignal,
 ): Promise<Buffer> {
+    throwIfAborted(signal);
     const socket = await bindRequest(localPort);
 
     return new Promise<Buffer>((resolve, reject) => {
         let finished = false;
-        const timeoutSignal = AbortSignal.timeout(timeoutMs);
+        const timeoutHandle = setTimeout(onTimeout, timeoutMs);
+        timeoutHandle.unref?.();
 
         const cleanup = (): void => {
-            timeoutSignal.removeEventListener('abort', onTimeout);
-            socket.removeAllListeners();
-            socket.close();
+            clearTimeout(timeoutHandle);
+            signal?.removeEventListener('abort', onAbort);
+            closeSocketSafely(socket);
         };
 
         const finish = (error?: Error, response?: Buffer): void => {
@@ -205,7 +291,15 @@ async function requestOnce(
             finish(new Error(`UDP request to ${host}:${port} timed out after ${timeoutMs} ms`));
         }
 
-        timeoutSignal.addEventListener('abort', onTimeout, { once: true });
+        function onAbort(): void {
+            finish(createAbortError());
+        }
+
+        if (signal?.aborted) {
+            onAbort();
+            return;
+        }
+        signal?.addEventListener('abort', onAbort, { once: true });
         socket.on('error', finish);
         socket.on('message', (message, remoteInfo) => {
             if (remoteInfo.address === host && remoteInfo.port === port) {
@@ -226,7 +320,9 @@ async function sendOnce(
     payload: Buffer,
     localPort: number = port,
     bindRequest: (localPort: number) => Promise<SikuRequestSocket> = bindRequestSocket,
+    signal?: AbortSignal,
 ): Promise<void> {
+    throwIfAborted(signal);
     const socket = await bindRequest(localPort);
 
     return new Promise<void>((resolve, reject) => {
@@ -236,11 +332,20 @@ async function sendOnce(
                 return;
             }
             finished = true;
-            socket.removeAllListeners();
-            socket.close();
+            signal?.removeEventListener('abort', onAbort);
+            closeSocketSafely(socket);
             error ? reject(error) : resolve();
         };
 
+        function onAbort(): void {
+            finish(createAbortError());
+        }
+
+        if (signal?.aborted) {
+            onAbort();
+            return;
+        }
+        signal?.addEventListener('abort', onAbort, { once: true });
         socket.on('error', finish);
         socket.send(payload, port, host, error => finish(error ?? undefined));
     });
@@ -282,11 +387,12 @@ async function executeRequestWithRetries(
     retryDelaysMs: readonly number[],
     expectedDeviceId: string,
     expectedParameters: readonly number[],
+    signal: AbortSignal | undefined,
     dependencies: SikuNetworkDependencies,
 ): Promise<ParsedSikuPacket> {
     const request =
         dependencies.requestOnce ??
-        ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort) =>
+        ((targetHost, targetPort, requestPayload, requestTimeoutMs, requestLocalPort, requestSignal) =>
             requestOnce(
                 targetHost,
                 targetPort,
@@ -294,17 +400,18 @@ async function executeRequestWithRetries(
                 requestTimeoutMs,
                 requestLocalPort,
                 dependencies.bindRequestSocket,
+                requestSignal,
             ));
-    const timer = dependencies.timer ?? nodeTimer;
     let lastError: Error | undefined;
 
     for (const retryDelay of retryDelaysMs) {
         try {
+            throwIfAborted(signal);
             if (retryDelay > 0) {
-                await timer(retryDelay);
+                await waitForDelay(retryDelay, dependencies.timer, signal);
             }
 
-            const response = await request(host, port, payload, timeoutMs, localPort);
+            const response = await request(host, port, payload, timeoutMs, localPort, signal);
             const parsed = parsePacket(response);
             if (!parsed.checksumValid) {
                 throw new Error(`Invalid checksum in response from ${host}`);
@@ -318,6 +425,9 @@ async function executeRequestWithRetries(
 
             return parsed;
         } catch (error) {
+            if (isAbortError(error)) {
+                throw error;
+            }
             lastError = error as Error;
         }
     }
@@ -445,6 +555,7 @@ export async function readDevicePacket(
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
         options.deviceId,
         options.parameters.map(parameter => parameter.parameter),
+        options.signal,
         dependencies,
     );
 }
@@ -470,6 +581,7 @@ export async function writeDevicePacket(
         options.retryDelaysMs ?? SIKU_REQUEST_RETRY_DELAYS_MS,
         options.deviceId,
         options.parameters.map(parameter => parameter.parameter),
+        options.signal,
         dependencies,
     );
 
@@ -496,10 +608,17 @@ export async function sendWriteOnlyDevicePacket(
     const payload = buildWritePacket(options.deviceId, options.password, SikuFunction.Write, options.parameters);
     const send =
         dependencies.sendOnce ??
-        ((targetHost, targetPort, requestPayload, requestLocalPort) =>
-            sendOnce(targetHost, targetPort, requestPayload, requestLocalPort, dependencies.bindRequestSocket));
+        ((targetHost, targetPort, requestPayload, requestLocalPort, requestSignal) =>
+            sendOnce(
+                targetHost,
+                targetPort,
+                requestPayload,
+                requestLocalPort,
+                dependencies.bindRequestSocket,
+                requestSignal,
+            ));
 
-    await send(options.host, port, payload, localPort);
+    await send(options.host, port, payload, localPort, options.signal);
 }
 
 export async function discoverDevices(
@@ -507,18 +626,26 @@ export async function discoverDevices(
     dependencies: SikuNetworkDependencies = {},
 ): Promise<SikuDiscoveredDevice[]> {
     const bind = dependencies.bindSocketWithFallback ?? bindSocketWithFallback;
-    const timer = dependencies.timer ?? nodeTimer;
     const now = dependencies.now ?? (() => new Date());
     const localAddresses = (dependencies.getLocalIPv4Addresses ?? getLocalIPv4Addresses)();
+    throwIfAborted(options.signal);
     const socket = await bind(options.preferredBindPort ?? SIKU_DEFAULT_PORT);
-    const discoveryPacket = buildDiscoveryPacket(options.password ?? SIKU_DEFAULT_PASSWORD);
+    const discoveryPasswords = Array.from(
+        new Set(options.passwords?.length ? options.passwords : [options.password ?? SIKU_DEFAULT_PASSWORD]),
+    ).slice(0, SIKU_DISCOVERY_MAX_PASSWORDS);
+    const discoveryPackets = discoveryPasswords.map(password => buildDiscoveryPacket(password));
 
     try {
+        throwIfAborted(options.signal);
         socket.setBroadcast(true);
         const devices = new Map<string, SikuDiscoveredDevice>();
 
         socket.on('message', (message, remoteInfo) => {
-            if (isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket)) {
+            if (
+                discoveryPackets.some(discoveryPacket =>
+                    isDiscoverySelfEcho(message, remoteInfo, localAddresses, socket.address().port, discoveryPacket),
+                )
+            ) {
                 return;
             }
 
@@ -534,15 +661,29 @@ export async function discoverDevices(
             }
         });
 
-        await new Promise<void>((resolve, reject) => {
-            socket.send(discoveryPacket, options.port ?? SIKU_DEFAULT_PORT, options.broadcastAddress, error =>
-                error ? reject(error) : resolve(),
-            );
+        const socketError = new Promise<never>((_resolve, reject) => {
+            socket.on('error', reject);
         });
+        const discoveryWindow = (async (): Promise<void> => {
+            await Promise.all(
+                discoveryPackets.map(
+                    discoveryPacket =>
+                        new Promise<void>((resolve, reject) => {
+                            socket.send(
+                                discoveryPacket,
+                                options.port ?? SIKU_DEFAULT_PORT,
+                                options.broadcastAddress,
+                                error => (error ? reject(error) : resolve()),
+                            );
+                        }),
+                ),
+            );
+            await waitForDelay(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS, dependencies.timer, options.signal);
+        })();
 
-        await timer(options.timeoutMs ?? SIKU_DISCOVERY_TIMEOUT_MS);
+        await waitWithSignal(Promise.race([discoveryWindow, socketError]), options.signal);
         return Array.from(devices.values()).sort((left, right) => left.deviceId.localeCompare(right.deviceId));
     } finally {
-        socket.close();
+        closeSocketSafely(socket);
     }
 }

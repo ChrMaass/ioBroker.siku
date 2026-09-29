@@ -85,9 +85,12 @@ function normalizeDevicePasswordRegistry(registry) {
 function serializeDevicePasswordRegistry(registry) {
   return Object.entries(registry).sort(([leftId], [rightId]) => leftId.localeCompare(rightId)).map(([id, password]) => ({ id, password }));
 }
-function resolveConfiguredDevicePassword(device, index, registry) {
+function resolveConfiguredDevicePassword(device, index, registry, unavailableDeviceIds = /* @__PURE__ */ new Set()) {
   var _a;
   const normalizedId = normalizeDevicePasswordRegistryKey(device.id);
+  if (normalizedId && unavailableDeviceIds.has(normalizedId)) {
+    throw new Error(`devicePasswords.${normalizedId} could not be decrypted and must be configured again`);
+  }
   const registryPassword = normalizedId ? registry[normalizedId] : void 0;
   const legacyPassword = getTrimmedPasswordValue(device.password);
   const resolvedPassword = (_a = registryPassword != null ? registryPassword : legacyPassword) != null ? _a : import_siku_constants.SIKU_DEFAULT_PASSWORD;
@@ -116,11 +119,14 @@ function prepareStoredDevicePasswords(options) {
   const storedRows = getStoredPasswordRows(options.storedRegistry);
   const runtimeRegistry = {};
   const storedRegistry = [];
+  const invalidDeviceIds = [];
+  const configuredIds = /* @__PURE__ */ new Set();
   for (const device of options.configuredDevices) {
     const id = normalizeDevicePasswordRegistryKey(device.id);
-    if (!id || runtimeRegistry[id] !== void 0) {
+    if (!id || configuredIds.has(id)) {
       continue;
     }
+    configuredIds.add(id);
     const storedValue = storedRows.get(id);
     let decryptedStoredValue;
     let password;
@@ -143,7 +149,11 @@ function prepareStoredDevicePasswords(options) {
       password = isProtocolPassword(legacyInlinePassword) ? legacyInlinePassword : import_siku_constants.SIKU_DEFAULT_PASSWORD;
     }
     if (!password) {
-      throw new Error(`No usable password found for device ${id}`);
+      invalidDeviceIds.push(id);
+      if (storedValue) {
+        storedRegistry.push({ id, password: storedValue });
+      }
+      continue;
     }
     runtimeRegistry[id] = password;
     storedRegistry.push({
@@ -153,10 +163,19 @@ function prepareStoredDevicePasswords(options) {
   }
   storedRegistry.sort((left, right) => left.id.localeCompare(right.id));
   const normalizedStoredRows = Array.from(storedRows.entries()).sort(([leftId], [rightId]) => leftId.localeCompare(rightId)).map(([id, password]) => ({ id, password }));
+  if (configuredIds.size === 0) {
+    return {
+      runtimeRegistry,
+      storedRegistry: normalizedStoredRows,
+      storageChanged: false,
+      invalidDeviceIds
+    };
+  }
   return {
     runtimeRegistry,
     storedRegistry,
-    storageChanged: !Array.isArray(options.storedRegistry) || JSON.stringify(storedRegistry) !== JSON.stringify(normalizedStoredRows)
+    storageChanged: !Array.isArray(options.storedRegistry) || JSON.stringify(storedRegistry) !== JSON.stringify(normalizedStoredRows),
+    invalidDeviceIds
   };
 }
 function buildDevicePasswordRegistry(devices, currentRegistry) {

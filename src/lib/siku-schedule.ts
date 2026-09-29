@@ -21,6 +21,14 @@ export interface SikuScheduleStateDefinition {
     common: Partial<ioBroker.StateCommon>;
 }
 
+export interface SikuScheduleSnapshotState {
+    relativeId: string;
+    value: ioBroker.StateValue;
+    acknowledged: boolean;
+    /** True only while this adapter instance is actively processing the matching user write. */
+    pending?: boolean;
+}
+
 const SIKU_SCHEDULE_DAYS: readonly SikuScheduleDayDefinition[] = [
     { key: 'monday', number: 1, name: 'Monday' },
     { key: 'tuesday', number: 2, name: 'Tuesday' },
@@ -276,4 +284,40 @@ export function buildScheduleWriteRequest(
         parameter: SIKU_PARAMETER_SCHEDULE,
         value: Buffer.from([definition.dayNumber, definition.periodNumber, speed, 0x00, endMinute, endHour]),
     };
+}
+
+/**
+ * Builds a complete schedule write from confirmed or actively pending sibling states.
+ *
+ * The state currently changed by the user is expected to be unacknowledged. Another
+ * unacknowledged sibling is accepted only when this adapter instance is actively
+ * processing that write. This coalesces quick UI changes while preventing stale values
+ * left behind by an earlier failed write from being replayed.
+ *
+ * @param relativeId - Schedule state currently changed by the user
+ * @param value - New user-provided value
+ * @param snapshotStates - Current period snapshot read from ioBroker
+ */
+export function buildScheduleWriteRequestFromSnapshot(
+    relativeId: string,
+    value: ioBroker.StateValue,
+    snapshotStates: readonly SikuScheduleSnapshotState[],
+): SikuWriteRequestEntry {
+    const expectedStateIds = getScheduleSnapshotStateIds(relativeId);
+    const statesById = new Map(snapshotStates.map(state => [state.relativeId, state]));
+    const values: Record<string, ioBroker.StateValue> = {};
+
+    for (const expectedStateId of expectedStateIds) {
+        const snapshot = statesById.get(expectedStateId);
+        if (!snapshot || snapshot.value === null || snapshot.value === undefined) {
+            throw new Error(`Schedule snapshot state ${expectedStateId} is missing or has no value`);
+        }
+        if (expectedStateId !== relativeId && !snapshot.acknowledged && !snapshot.pending) {
+            throw new Error(`Schedule snapshot state ${expectedStateId} is not acknowledged`);
+        }
+        values[expectedStateId] = snapshot.value;
+    }
+
+    values[relativeId] = value;
+    return buildScheduleWriteRequest(relativeId, values);
 }

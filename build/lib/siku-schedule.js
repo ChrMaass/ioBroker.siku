@@ -23,6 +23,7 @@ __export(siku_schedule_exports, {
   buildScheduleReadRequestChunks: () => buildScheduleReadRequestChunks,
   buildScheduleReadRequests: () => buildScheduleReadRequests,
   buildScheduleWriteRequest: () => buildScheduleWriteRequest,
+  buildScheduleWriteRequestFromSnapshot: () => buildScheduleWriteRequestFromSnapshot,
   decodeScheduleUpdates: () => decodeScheduleUpdates,
   getScheduleDayDefinitions: () => getScheduleDayDefinitions,
   getScheduleSnapshotStateIds: () => getScheduleSnapshotStateIds,
@@ -225,6 +226,23 @@ function buildScheduleWriteRequest(relativeId, values) {
     value: Buffer.from([definition.dayNumber, definition.periodNumber, speed, 0, endMinute, endHour])
   };
 }
+function buildScheduleWriteRequestFromSnapshot(relativeId, value, snapshotStates) {
+  const expectedStateIds = getScheduleSnapshotStateIds(relativeId);
+  const statesById = new Map(snapshotStates.map((state) => [state.relativeId, state]));
+  const values = {};
+  for (const expectedStateId of expectedStateIds) {
+    const snapshot = statesById.get(expectedStateId);
+    if (!snapshot || snapshot.value === null || snapshot.value === void 0) {
+      throw new Error(`Schedule snapshot state ${expectedStateId} is missing or has no value`);
+    }
+    if (expectedStateId !== relativeId && !snapshot.acknowledged && !snapshot.pending) {
+      throw new Error(`Schedule snapshot state ${expectedStateId} is not acknowledged`);
+    }
+    values[expectedStateId] = snapshot.value;
+  }
+  values[relativeId] = value;
+  return buildScheduleWriteRequest(relativeId, values);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   SIKU_SCHEDULE_STATE_DEFINITIONS,
@@ -232,6 +250,7 @@ function buildScheduleWriteRequest(relativeId, values) {
   buildScheduleReadRequestChunks,
   buildScheduleReadRequests,
   buildScheduleWriteRequest,
+  buildScheduleWriteRequestFromSnapshot,
   decodeScheduleUpdates,
   getScheduleDayDefinitions,
   getScheduleSnapshotStateIds,

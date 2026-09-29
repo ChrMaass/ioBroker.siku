@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "news": {
+      "0.2.3": {
+        "en": "- Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and\n  password/object lifecycle behavior.",
+        "de": "- Harden RTC Scheduling, UDP Shutdown / Fehlerhandling, fehlgeformte Antwort Isolation, Zeitplan schreiben Wiederherstellung und\npasswort/objekt-lebenszyklusverhalten.",
+        "ru": "- Укрепление графика RTC, отключение UDP / обработка ошибок, искаженная изоляция ответа, восстановление записи графика и\nповедение жизненного цикла пароля/объекта.",
+        "pt": "- Endureça programação RTC, UDP desligamento / manipulação de erro, isolamento de resposta mal formada, gravação de programação recuperação e\ncomportamento do ciclo de vida da senha/objeto.",
+        "nl": "- Harden RTC planning, UDP shutdown/error handling, misvormde respons isolatie, schema schrijven herstel en\npassword/object lifecycle gedrag.",
+        "fr": "- Harden RTC calendrier, UDP arrêt / manipulation d'erreur, l'isolement de la réponse mal formée, calendrier écrit récupération et\ncomportement du cycle de vie mot de passe/objet.",
+        "it": "- Harden RTC scheduling, UDP shutdown/error handling, malformato isolamento di risposta, programma di recupero di scrittura e\ncomportamento del ciclo di vita della password/oggetto.",
+        "es": "- Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and\ncontraseña/objetar el comportamiento del ciclo de vida.",
+        "pl": "- Harden planowania RTC, UDP zamknięcia / obsługi błędów, nieprawidłowej izolacji odpowiedzi, harmonogram zapisu odzyskiwania i\nzachowanie cyklu życia haseł / obiektu.",
+        "uk": "- Harden RTC scheduling, UDP вимкнення / термічне обслуговування, ізоляція несправностей, графік відновлення та відновлення\nповедінка життєвого циклу пароля/object.",
+        "zh-cn": "- Harden RTC的时间安排、UDP关闭/处理错误、反应隔离不当、时间表写入恢复和\n密码/对象生命周期行为."
+      },
       "0.2.2": {
         "en": "Harden repository-checker compatibility for nested password protection, compact-mode CI scripts and release recovery.",
         "de": "Verbesserung der Kompatibilität zwischen Repository und Prüfprogramm für verschachtelten Passwortschutz, CI-Skripte im Kompaktmodus und Release-Wiederherstellung.",
@@ -80,19 +93,6 @@
         "pl": "Dopasowanie hierarchii obiektów jOBroker i zapisywalnych ról stanu do Object- Structure- Checker.",
         "uk": "Визначено ієрархію об’єкта ioBroker та життєздатні ролі держави з об’єктом-структурою-Чекером.",
         "zh-cn": "将ioBroker对象等级和可写状态角色与对象-Structure-Checker对齐."
-      },
-      "0.1.5": {
-        "en": "Addressed ioBroker repository checker findings, updated CI matrix and translations, and hardened UDP timeout handling.",
-        "de": "ioBroker-Repository-Checker-Hinweise behoben, CI-Matrix und Übersetzungen aktualisiert sowie UDP-Timeout-Handling gehärtet.",
-        "ru": "Исправлены замечания ioBroker Repository Checker, обновлены CI-матрица и переводы, улучшена обработка UDP-тайм-аутов.",
-        "pt": "Corrigidos avisos do ioBroker Repository Checker, atualizadas a matriz de CI e traduções, e reforçado o tratamento de timeouts UDP.",
-        "nl": "ioBroker Repository Checker-meldingen opgelost, CI-matrix en vertalingen bijgewerkt en UDP-timeoutafhandeling verbeterd.",
-        "fr": "Corrections des remarques du ioBroker Repository Checker, mise à jour de la matrice CI et des traductions, et durcissement des timeouts UDP.",
-        "it": "Risolti i rilievi di ioBroker Repository Checker, aggiornate matrice CI e traduzioni, e rafforzata la gestione dei timeout UDP.",
-        "es": "Corregidas las observaciones de ioBroker Repository Checker, actualizadas la matriz CI y las traducciones, y reforzado el manejo de timeouts UDP.",
-        "pl": "Usunięto uwagi ioBroker Repository Checker, zaktualizowano macierz CI i tłumaczenia oraz wzmocniono obsługę timeoutów UDP.",
-        "uk": "Виправлено зауваження ioBroker Repository Checker, оновлено CI-матрицю й переклади та посилено обробку UDP-тайм-аутів.",
-        "zh-cn": "修复 ioBroker Repository Checker 提示，更新 CI 矩阵和翻译，并强化 UDP 超时处理。"
       }
     },
     "titleLang": {

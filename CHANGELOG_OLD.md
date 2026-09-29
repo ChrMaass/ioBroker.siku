@@ -1,4 +1,9 @@
 # Older changelog entries
+## 0.1.7 (2026-06-09)
+
+- Converted runtime logs and ioBroker object labels to English for repository review compliance.
+- Added Node.js-safe upper bounds for configurable polling and RTC check intervals while keeping automatic RTC checks at a 24-hour minimum.
+
 ## 0.1.6 (2026-06-05)
 
 - Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.
