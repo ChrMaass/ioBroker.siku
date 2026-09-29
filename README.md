@@ -134,6 +134,10 @@ guard for configuration handling, not a security boundary against malicious code
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
 ### **WORK IN PROGRESS**
 
+- Update the runtime adapter-core dependency to 3.4.3.
+- Update compatible development dependencies, remove the obsolete dev-server hot-reload stack,
+  and enforce full dependency audits in CI.
+
 ### 0.2.3 (2026-07-26)
 
 - Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and
