@@ -132,6 +132,8 @@ guard for configuration handling, not a security boundary against malicious code
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
+### **WORK IN PROGRESS**
+
 ### 0.2.4 (2026-09-29)
 
 - Update the runtime adapter-core dependency to 3.4.3.
