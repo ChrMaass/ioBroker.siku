@@ -20,3 +20,4 @@ describe('SIKU package hardening metadata', () => {
 });
 
 require('./auto-release-policy.test.js');
+require('./toolchain-security.test.js');

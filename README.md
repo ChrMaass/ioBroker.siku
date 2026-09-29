@@ -82,10 +82,14 @@ Useful scripts:
 | `npm run lint`       | Run ESLint                                     |
 | `npm run test`       | Run unit and package tests                     |
 | `npm run coverage`   | Enforce and report TypeScript test coverage    |
-| `npm run dev-server` | Start a local ioBroker development environment |
+| `npm run test:integration` | Start and test an isolated local ioBroker controller |
+| `npm run audit:dependencies` | Audit both the full development tree and production dependencies |
 | `npm run release`    | Create an official release/tag via release-tooling |
 
 The adapter was generated with the official ioBroker tooling and is developed in TypeScript.
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the supported toolchain, local integration tests,
+manual Admin testing and the removal of the obsolete development-server hot-reload stack.
 
 ## CI / CD
 
