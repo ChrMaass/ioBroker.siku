@@ -1,4 +1,10 @@
 # Older changelog entries
+## 0.1.8 (2026-06-09)
+
+- Cleaned up unused Admin translations found during the adapter checklist review.
+- Documented the advanced messagebox commands for script/integration use.
+- Added a code-side upper bound for the RTC time sync drift threshold.
+
 ## 0.1.7 (2026-06-09)
 
 - Converted runtime logs and ioBroker object labels to English for repository review compliance.

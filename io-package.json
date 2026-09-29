@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "siku",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "news": {
+      "0.2.4": {
+        "en": "- Update the runtime adapter-core dependency to 3.4.3.\n- Update compatible development dependencies, remove the obsolete dev-server hot-reload stack,\n  and enforce full dependency audits in CI.",
+        "de": "- Aktualisieren Sie die Laufzeitkernabhängigkeit auf 3.4.3.\n- Kompatible Abhängigkeiten aktualisieren, den veralteten Dev-Server-Hot-Reload-Stack entfernen,\n  und erzwingen Sie Abhängigkeitsprüfungen in CI.",
+        "ru": "- Обновите зависимость ядра адаптера во время выполнения до версии 3.4.3.\n- Обновите совместимые зависимости разработки, удалите устаревший стек горячей перезагрузки dev-server,\n  и проведите полный аудит зависимостей в CI.",
+        "pt": "- Atualize a dependência do Runtime Adapter-Core para 3.4.3.\n- Atualize dependências compatíveis, remova a pilha obsoleta de hot-reload do dev-server,\n  e imponha auditorias completas em CI.",
+        "nl": "- Update de core-afhankelijkheid van de runtime-adapter naar 3.4.3.\n- Werk ontwikkelafhankelijkheden bij die compatibel zijn, verwijder de verouderde hot-reload-stack voor dev-servers,\n  en voer volledige afhankelijkheidsaudits uit in CI.",
+        "fr": "- Mettez à jour la dépendance Runtime Adapter-Core à 3.4.3.\n- Mettez à jour les dépendances de développement compatibles, supprimez la pile de rechargement à chaud obsolète,\n  et appliquez des audits complets dans CI.",
+        "it": "- Aggiorna la dipendenza Runtime Adapter-Core a 3.4.3.\n- Aggiorna le dipendenze compatibili, rimuovi lo stack hot-reload obsoleto,\n  e applichi audit completi in CI.",
+        "es": "- Actualice la dependencia de Runtime Adapter-Core a 3.4.3.\n- Actualice las dependencias de desarrollo compatibles, elimine la obsoleta pila de recarga en caliente del servidor,\n  y hacer auditorías totales de dependencias en CI.",
+        "pl": "- Zaktualizuj zależność rdzenia adaptera wykonawczego do wersji 3.4.3.\n- Zaktualizuj zgodne zależności programistyczne, usuń przestarzały stos hot-reload dev-server,\n  i egzekwować pełne audyty zależności w CI.",
+        "uk": "- Оновіть залежність адаптера виконання від ядра до 3.4.3.\n- Оновлення сумісних залежностей розробки, видалення застарілого стека hot-reload dev-server,\n  та забезпечити повний аудит залежності в CI.",
+        "zh-cn": "-将运行时适配器核心依赖项更新到 3.4.3。\n-更新兼容的开发依赖关系，移除过时的开发服务器热重装堆栈，\n  并在 CI 中强制执行全面的依赖项审计。"
+      },
       "0.2.3": {
         "en": "- Harden RTC scheduling, UDP shutdown/error handling, malformed response isolation, schedule write recovery and\n  password/object lifecycle behavior.",
         "de": "- Harden RTC Scheduling, UDP Shutdown / Fehlerhandling, fehlgeformte Antwort Isolation, Zeitplan schreiben Wiederherstellung und\npasswort/objekt-lebenszyklusverhalten.",
@@ -80,19 +93,6 @@
         "pl": "Przeniesiono logi działania i etykiety obiektów ioBroker na język angielski oraz dodano bezpieczne dla Node.js limity interwałów timerów.",
         "uk": "Журнали виконання та назви об’єктів ioBroker переведено англійською, додано безпечні для Node.js обмеження інтервалів таймерів.",
         "zh-cn": "将运行时日志和 ioBroker 对象标签改为英文，并添加 Node.js 安全的定时器间隔限制。"
-      },
-      "0.1.6": {
-        "en": "Aligned the ioBroker object hierarchy and writable state roles with the Object-Structure-Checker.",
-        "de": "Mit dem Object-Structure-Checker wurde die ioBroker Objekthierarchie und schreibbare Zustandsrollen ligiert.",
-        "ru": "Выровняли иерархию объектов ioBroker и функции написанного состояния с Object-Structure-Checker.",
-        "pt": "Alinhado à hierarquia de objetos ioBroker e papéis de estado writáveis com o Object-Structure-Checker.",
-        "nl": "De ioBroker objecthiërarchie en beschrijfbare staat rollen met de Object-Structure-Checker uitlijnen.",
-        "fr": "Alignez la hiérarchie d'objet ioBroker et les rôles d'état en écriture avec l'Object-Structure-Checker.",
-        "it": "Allineato la gerarchia degli oggetti ioBroker e ruoli di stato scrivibili con il Object-Structure-Checker.",
-        "es": "Alinea la jerarquía de objetos ioBroker y los roles de estado complacientes con el Object-Structure-Checker.",
-        "pl": "Dopasowanie hierarchii obiektów jOBroker i zapisywalnych ról stanu do Object- Structure- Checker.",
-        "uk": "Визначено ієрархію об’єкта ioBroker та життєздатні ролі держави з об’єктом-структурою-Чекером.",
-        "zh-cn": "将ioBroker对象等级和可写状态角色与对象-Structure-Checker对齐."
       }
     },
     "titleLang": {

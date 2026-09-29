@@ -132,7 +132,7 @@ guard for configuration handling, not a security boundary against malicious code
 ## Changelog
 
 <!-- Release script placeholder for the next version. Keep this heading at the start of a line. -->
-### **WORK IN PROGRESS**
+### 0.2.4 (2026-09-29)
 
 - Update the runtime adapter-core dependency to 3.4.3.
 - Update compatible development dependencies, remove the obsolete dev-server hot-reload stack,
@@ -160,12 +160,6 @@ guard for configuration handling, not a security boundary against malicious code
 - Split weekly schedule reads into protocol-size-safe chunks and refresh them every 15 minutes.
 - Extract the object factory and operation scheduler, expand tests and enforce coverage in CI.
 - Modernize ioBroker dependencies, release actions and automatic patch-release classification.
-
-### 0.1.8 (2026-06-09)
-
-- Cleaned up unused Admin translations found during the adapter checklist review.
-- Documented the advanced messagebox commands for script/integration use.
-- Added a code-side upper bound for the RTC time sync drift threshold.
 
 Older changelog entries are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
