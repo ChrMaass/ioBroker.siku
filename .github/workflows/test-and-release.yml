@@ -31,6 +31,9 @@ jobs:
           type-checking: true
           lint: true
 
+      - name: Audit runtime and development dependencies
+        run: npm run audit:dependencies
+
   adapter-tests-smoke:
     needs: check-and-lint
     if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
